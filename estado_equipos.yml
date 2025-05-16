@@ -1,34 +1,42 @@
 - name: Comprobar estado de los equipos
   hosts: all
-  gather_facts: yes
-  become: yes
-  become_method: sudo
+  gather_facts: true
 
   tasks:
-    - name: Mostrar versión del sistema operativo
-      ansible.builtin.shell: lsb_release -d
-      register: os_version
-      changed_when: false
-
-    - name: Mostrar la versión de Ubuntu
+    - name: Mostrar nombre del equipo
       ansible.builtin.debug:
-        msg: "{{ os_version.stdout }}"
+        msg: "Nombre del host: {{ inventory_hostname }}"
+
+    - name: Mostrar versión de Ubuntu
+      ansible.builtin.command: lsb_release -d
+      register: ubuntu_version
+
+    - name: Reportar versión
+      ansible.builtin.debug:
+        msg: "Versión Ubuntu: {{ ubuntu_version.stdout }}"
 
     - name: Comprobar actualizaciones disponibles
-      ansible.builtin.shell: apt list --upgradable 2>/dev/null | grep -v 'Listing...'
+      ansible.builtin.command: apt list --upgradable
       register: updates
       changed_when: false
 
-    - name: Mostrar actualizaciones pendientes (si hay)
+    - name: Procesar lista de actualizaciones
+      ansible.builtin.set_fact:
+        updates_list: "{{ updates.stdout_lines | select('match', '^.+/') | list }}"
+
+    - name: Mostrar actualizaciones
       ansible.builtin.debug:
         msg: >
-          {%- if updates.stdout_lines|length > 0 -%}
-          Hay actualizaciones pendientes:
-          {{ updates.stdout_lines }}
-          {%- else -%}
-          El sistema está actualizado.
-          {%- endif -%}
+          {% if updates_list|length > 0 %}
+            Hay {{ updates_list | length }} actualizaciones:
+            {{ updates_list }}
+          {% else %}
+            El sistema está actualizado.
+          {% endif %}
 
-    - name: Mostrar nombre del equipo
-      ansible.builtin.debug:
-        msg: "Hostname: {{ ansible_hostname }}"
+    - name: Registrar resumen como stats
+      ansible.builtin.set_stats:
+        data:
+          equipo: "{{ inventory_hostname }}"
+          version: "{{ ubuntu_version.stdout }}"
+          actualizaciones: "{{ updates_list | length }}"
