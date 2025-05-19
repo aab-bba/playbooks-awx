@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SERVER="http://T04-00-Ubuntu:5000/keepalive"
+SERVER="http://T04-00-Ubuntu.local:5000/keepalive"
 
 HOSTNAME=$(/bin/hostname)
 IP=$(/bin/hostname -I | /usr/bin/awk '{print $1}')
