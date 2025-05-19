@@ -1,0 +1,18 @@
+- name: Instalar script keepalive en los equipos del aula
+  hosts: all
+  become: true
+  tasks:
+    - name: Copiar script keepalive
+      copy:
+        src: keepalive.sh
+        dest: /usr/local/bin/keepalive.sh
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Crear cron para ejecutar el script cada minuto
+      cron:
+        name: "Keepalive AWX"
+        user: root
+        minute: "*"
+        job: "/usr/local/bin/keepalive.sh"
