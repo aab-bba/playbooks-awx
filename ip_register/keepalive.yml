@@ -1,7 +1,14 @@
 - name: Instalar script keepalive en los equipos del aula
   hosts: all
   become: true
+
   tasks:
+    - name: Asegurarse de que curl esté instalado
+      apt:
+        name: curl
+        state: present
+        update_cache: yes
+
     - name: Copiar script keepalive
       copy:
         src: keepalive.sh
@@ -15,4 +22,4 @@
         name: "Keepalive AWX"
         user: root
         minute: "*"
-        job: "/usr/local/bin/keepalive.sh"
+        job: "/usr/local/bin/keepalive.sh >> /var/log/keepalive.log 2>&1"
