@@ -23,3 +23,18 @@
         msg: "Reiniciando tras actualización"
         reboot_timeout: 600
       when: reboot_required.stat.exists
+    
+    - name: Registrar resultado en la base de datos
+      community.mysql.mysql_query:
+        login_host: localhost
+        login_user: monitor
+        login_password: Pr0f3s0r3$
+        login_db: aula_monitor
+        query: >
+          INSERT INTO tareas (equipo_id, nombre_tarea, estado, salida)
+          VALUES (
+            {{ hostvars[inventory_hostname].equipo_id }},
+            'Actualizar y mejorar',
+            '{{ ansible_job_result.status }}',
+            '{{ ansible_job_result.stdout }}'
+          );

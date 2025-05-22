@@ -1,25 +1,28 @@
-- name: Instalar script keepalive en los equipos del aula
+- name: Actualizar equipos pendientes y registrar resultados
   hosts: all
-  become: true
-
+  gather_facts: no
+  vars:
+    db_host: localhost
+    db_user: monitor
+    db_password: Pr0f3s0r3$
+    db_name: aula_monitor
   tasks:
-    - name: Asegurarse de que curl esté instalado
-      apt:
-        name: curl
-        state: present
-        update_cache: yes
+    - name: Ejecutar actualización del sistema
+      ansible.builtin.shell: |
+        apt-get update && apt-get upgrade -y
+      register: resultado_actualizacion
+      ignore_errors: yes
 
-    - name: Copiar script keepalive
-      copy:
-        src: keepalive.sh
-        dest: /usr/local/bin/keepalive.sh
-        owner: root
-        group: root
-        mode: '0755'
-
-    - name: Crear cron para ejecutar el script cada minuto
-      cron:
-        name: "Keepalive AWX"
-        user: root
-        minute: "*"
-        job: "/usr/local/bin/keepalive.sh >> /var/log/keepalive.log 2>&1"
+    - name: Registrar resultado en la base de datos
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO tareas (equipo_id, tarea, resultado)
+          VALUES (
+            (SELECT id FROM equipos WHERE hostname = '{{ inventory_hostname }}'),
+            'update_upgrade',
+            '{{ resultado_actualizacion.stdout | default("Sin salida") }}'
+          );
