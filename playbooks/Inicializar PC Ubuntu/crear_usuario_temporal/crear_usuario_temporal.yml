@@ -26,6 +26,7 @@
 
     - name: Guardar resultados para registrar más tarde
       set_fact:
+        tarea_nombre: "crear_usuario_temporal"
         resultado_tarea: "{{ 'ok' if create_user_result is succeeded else 'error' }}"
         resultado_ok: "{{ 1 if create_user_result is succeeded else 0 }}"
         resultado_mensaje: "{{ create_user_result.msg | default('') }}"
@@ -33,26 +34,19 @@
       ignore_errors: true
 
     - name: Registrar resultados en la BBDD
-      hosts: localhost
-      gather_facts: no
-      vars:
-        tarea_nombre: "crear_usuario_temporal"
-
-  tasks:
-
-    - name: Registrar resultados en la base de datos
       community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
         login_user: "{{ db_user }}"
         login_password: "{{ db_password }}"
         login_db: "{{ db_name }}"
         query: >
-          INSERT INTO {{ db_table }} (equipo_id, nombre_tarea, estado, resultado_ok, fecha_ejecucion)
+          INSERT INTO {{ db_table }} (equipo_id, nombre_tarea, correcta, resultado, fecha_ejecucion)
           VALUES (
-            '{{ hostvars[item].equipo_id | default("NULL") }}',
-            '{{ tarea_nombre }}',
-            '{{ hostvars[item].resultado_tarea | default("error") }}',
-            {{ hostvars[item].resultado_ok | default(0) }},
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ hostvars[inventory_hostname].tarea_nombre | default("desconocida") }}',
+            {{ hostvars[inventory_hostname].resultado_ok | default(0) }},
+            '{{ hostvars[inventory_hostname].resultado_tarea | default("error") }}',
             NOW()
           );
-      loop: "{{ groups['pendientes'] }}"
-      when: hostvars[item].equipo_id is defined
+      delegate_to: localhost
+      when: hostvars[inventory_hostname].equipo_id is defined
