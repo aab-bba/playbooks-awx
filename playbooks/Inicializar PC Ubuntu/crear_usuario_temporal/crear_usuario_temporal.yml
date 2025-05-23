@@ -33,7 +33,7 @@
       when: setup_result is defined
       ignore_errors: true
 
-        - name: Registrar resultados en la BBDD
+    - name: Registrar resultados en la BBDD
       community.mysql.mysql_query:
         login_host: "{{ db_host }}"
         login_user: "{{ db_user }}"
