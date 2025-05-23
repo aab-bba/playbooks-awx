@@ -5,7 +5,7 @@
   become: false
 
   tasks:
-  
+
     - name: Recolectar datos del sistema
       setup:
       register: setup_result
@@ -14,15 +14,33 @@
     - name: Crear usuario temporal
       ansible.builtin.user:
         name: ansible_temp
-        password: "{{ ansible_temp_password }}"
+        password: "{{ ansible_temp_password | password_hash('sha512') }}"
         shell: /bin/bash
         groups: sudo
         append: yes
         state: present
       become: true
       when: setup_result is succeeded
+      register: create_user_result
+      ignore_errors: true
 
-    - name: Registrar resultado en la BBDD
+    - name: Guardar resultados para registrar más tarde
+      set_fact:
+        resultado_tarea: "{{ 'ok' if create_user_result is succeeded else 'error' }}"
+        resultado_ok: "{{ 1 if create_user_result is succeeded else 0 }}"
+        resultado_mensaje: "{{ create_user_result.msg | default('') }}"
+      when: setup_result is defined
+      ignore_errors: true
+
+    - name: Registrar resultados en la BBDD
+      hosts: localhost
+      gather_facts: no
+      vars:
+        tarea_nombre: "crear_usuario_temporal"
+
+  tasks:
+
+    - name: Registrar resultados en la base de datos
       community.mysql.mysql_query:
         login_user: "{{ db_user }}"
         login_password: "{{ db_password }}"
@@ -30,11 +48,11 @@
         query: >
           INSERT INTO {{ db_table }} (equipo_id, nombre_tarea, estado, resultado_ok, fecha_ejecucion)
           VALUES (
-            '{{ hostvars[inventory_hostname].equipo_id | default("NULL") }}',
+            '{{ hostvars[item].equipo_id | default("NULL") }}',
             '{{ tarea_nombre }}',
-            '{{ "ok" if setup_result is succeeded else "error" }}',
-            {{ 1 if setup_result is succeeded else 0 }},
+            '{{ hostvars[item].resultado_tarea | default("error") }}',
+            {{ hostvars[item].resultado_ok | default(0) }},
             NOW()
           );
-      delegate_to: localhost
-      when: db_user is defined and db_password is defined
+      loop: "{{ groups['pendientes'] }}"
+      when: hostvars[item].equipo_id is defined
