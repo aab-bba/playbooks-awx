@@ -9,6 +9,7 @@
   tasks:
     - name: Registrar tarea de prueba en la BBDD
       community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
         login_user: "{{ db_user }}"
         login_password: "{{ db_password }}"
         login_db: "{{ db_name }}"
