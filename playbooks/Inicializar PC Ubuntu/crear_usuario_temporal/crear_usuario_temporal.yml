@@ -1,43 +1,37 @@
+---
 - name: Añadir usuario temporal con sudo
   hosts: all
   gather_facts: no
+  ignore_unreachable: yes  # Esto es clave
+
   vars:
-    tarea_nombre: "crear_usuario"
+    tarea_nombre: "crear_usuario_temporal"
+    db_name: "aula_monitor"
+    db_table: "tareas"
+    db_user: "{{ db_user }}"          # viene de la encuesta
+    db_password: "{{ db_password }}"  # viene de la encuesta
+
   tasks:
 
-    - name: Intentar conexión y recopilar facts
-      block:
-        - name: Recolectar datos del sistema
-          ansible.builtin.setup:
-          register: setup_result
+    - name: Recolectar datos del sistema
+      setup:
+      ignore_errors: yes  # Para que siga el play aunque falle
+      register: setup_result
 
-        - name: Añadir usuario temporal
-          ansible.builtin.user:
-            name: ansible_temp
-            password: "{{ '1234' | password_hash('sha512') }}"
-            shell: /bin/bash
-            groups: sudo
-            append: yes
-          become: yes
-
-      rescue:
-        - name: Guardar fallo en la base de datos (sin conexión)
-          include_tasks: registrar_tarea.yml
-          vars:
-            resultado: "Fallo de conexión SSH"
-            correcta: "0"
-            equipo_id: "{{ equipo_id | default('desconocido') }}"
-            tarea_nombre: "{{ tarea_nombre }}"
-            tiempo: "{{ ansible_date_time.iso8601 }}"
-          run_once: true
-
-      always:
-        - name: Registrar éxito (si no hubo errores)
-          when: setup_result is defined and setup_result.failed is not defined
-          include_tasks: registrar_tarea.yml
-          vars:
-            resultado: "Usuario creado correctamente"
-            correcta: "1"
-            equipo_id: "{{ equipo_id }}"
-            tarea_nombre: "{{ tarea_nombre }}"
-            tiempo: "{{ ansible_date_time.iso8601 }}"
+    - name: Registrar resultado en la BBDD
+      community.mysql.mysql_query:
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }} (equipo_id, nombre_tarea, estado, resultado_ok, fecha_ejecucion)
+          VALUES (
+            '{{ hostvars[inventory_hostname].equipo_id }}',
+            '{{ tarea_nombre }}',
+            '{{ "ok" if setup_result is succeeded else "error" }}',
+            {{ 1 if setup_result is succeeded else 0 }},
+            NOW()
+          );
+      delegate_to: localhost
+      run_once: false  # se ejecuta por cada host
+      when: "'equipo_id' in hostvars[inventory_hostname]"
