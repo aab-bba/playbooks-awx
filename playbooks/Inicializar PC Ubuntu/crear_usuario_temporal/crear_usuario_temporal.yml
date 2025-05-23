@@ -18,10 +18,17 @@
       ignore_errors: yes  # Para que siga el play aunque falle
       register: setup_result
 
+    - name: Asegurar acceso a variables de encuesta
+      set_fact:
+        _db_user: "{{ db_user }}"
+        _db_password: "{{ db_password }}"
+      delegate_to: localhost
+      run_once: true
+
     - name: Registrar resultado en la BBDD
       community.mysql.mysql_query:
-        login_user: "{{ db_user }}"
-        login_password: "{{ db_password }}"
+        login_user: "{{ _db_user }}"
+        login_password: "{{ _db_password }}"
         login_db: "{{ db_name }}"
         query: >
           INSERT INTO {{ db_table }} (equipo_id, nombre_tarea, estado, resultado_ok, fecha_ejecucion)
@@ -33,5 +40,6 @@
             NOW()
           );
       delegate_to: localhost
-      run_once: false  # se ejecuta por cada host
+      run_once: false
       when: "'equipo_id' in hostvars[inventory_hostname]"
+      
