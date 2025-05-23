@@ -4,53 +4,70 @@
   gather_facts: no
   become: false
 
+  vars:
+    tarea_1: "Recolectar datos del sistema"
+    tarea_2: "Crear usuario temporal"
+    tarea_nombre_base: "crear_usuario_temporal"
+
   tasks:
 
-    - name: Recolectar datos del sistema
+    - name: Tarea 1 - Recolectar datos del sistema
       setup:
-      register: setup_result
+      register: resultado_tarea_1
       ignore_unreachable: true
-
-    - name: Crear usuario temporal
-      ansible.builtin.user:
-        name: ansible_temp
-        password: "{{ ansible_temp_password }}"
-        shell: /bin/bash
-        groups: sudo
-        append: yes
-        state: present
-      become: true
-      when: setup_result is succeeded
-      register: create_user_result
       ignore_errors: true
 
-    - name: Guardar resultados para registrar más tarde
-      set_fact:
-        tarea_nombre: "crear_usuario_temporal"
-        resultado_tarea: "{{ 'ok' if create_user_result is succeeded else 'error' }}"
-        resultado_ok: "{{ 1 if create_user_result is succeeded else 0 }}"
-        resultado_mensaje: "{{ create_user_result.msg | default('') }}"
-      when: setup_result is defined
-      ignore_errors: true
-
-    - name: Registrar resultados en la BBDD
+    - name: Registrar resultado tarea 1 en BBDD
       community.mysql.mysql_query:
         login_host: "{{ db_host }}"
         login_user: "{{ db_user }}"
         login_password: "{{ db_password }}"
         login_db: "{{ db_name }}"
         query: >
-          INSERT INTO {{ db_table }} (equipo_id, nombre_tarea, correcta, resultado, fecha_ejecucion)
+          INSERT INTO {{ db_table }}
+          (equipo_id, nombre_tarea, correcta, resultado, mensaje_error, fecha_ejecucion)
           VALUES (
             {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
-            '{{ hostvars[inventory_hostname].tarea_nombre | default("desconocida") }}',
-            {{ hostvars[inventory_hostname].resultado_ok | default(0) }},
-            '{{ hostvars[inventory_hostname].resultado_tarea | default("error") }}',
+            '{{ tarea_nombre_base }} - {{ tarea_1 }}',
+            {{ 1 if resultado_tarea_1 is succeeded else 0 }},
+            '{{ "ok" if resultado_tarea_1 is succeeded else "error" }}',
+            '{{ resultado_tarea_1.msg | default("Sin mensaje") }}',
             NOW()
           );
       delegate_to: localhost
-      run_once: false
+      ignore_errors: true
+
+    - name: Tarea 2 - Crear usuario temporal
+      ansible.builtin.user:
+        name: ansible_temp
+        password: "{{ ansible_temp_password | password_hash('sha512') }}"
+        shell: /bin/bash
+        groups: sudo
+        append: yes
+        state: present
+      become: true
+      when: resultado_tarea_1 is succeeded
+      register: resultado_tarea_2
       ignore_errors: true
       ignore_unreachable: true
-      when: hostvars[inventory_hostname].equipo_id is defined
 
+    - name: Registrar resultado tarea 2 en BBDD
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }}
+          (equipo_id, nombre_tarea, correcta, resultado, mensaje_error, fecha_ejecucion)
+          VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ tarea_nombre_base }} - {{ tarea_2 }}',
+            {{ 1 if resultado_tarea_2 is succeeded else 0 }},
+            '{{ "ok" if resultado_tarea_2 is succeeded else "error" }}',
+            '{{ resultado_tarea_2.msg | default("Sin mensaje") }}',
+            NOW()
+          );
+      delegate_to: localhost
+      when: resultado_tarea_2 is defined
+      ignore_errors: true
