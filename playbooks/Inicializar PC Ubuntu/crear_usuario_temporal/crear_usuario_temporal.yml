@@ -28,14 +28,13 @@
         login_password: "{{ db_password }}"
         login_db: "{{ db_name }}"
         query: >
-          INSERT INTO {{ db_table }} (equipo_id, playbook, playbook_uid, nombre_tarea, correcta, resultado, mensaje_error, fecha_ejecucion)
+          INSERT INTO {{ db_table }} (equipo_id, playbook, playbook_uid, nombre_tarea, correcta, mensaje_error, fecha_ejecucion)
           VALUES (
             {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
             '{{ playbook_nombre }}',
             '{{ playbook_id }}',
             '{{ tarea_1 }}',
-            {{ 1 if resultado_tarea_1 is succeeded else 0 }},
-            '{{ "ok" if resultado_tarea_1 is succeeded else "error" }}',
+            {{ 0 if resultado_tarea_1.failed | default(false) else 1 }}
             '{{ resultado_tarea_1.msg | default("") }}',
             NOW()
           );
@@ -63,14 +62,13 @@
         login_password: "{{ db_password }}"
         login_db: "{{ db_name }}"
         query: >
-          INSERT INTO {{ db_table }} (equipo_id, playbook, playbook_uid, nombre_tarea, correcta, resultado, mensaje_error, fecha_ejecucion)
+          INSERT INTO {{ db_table }} (equipo_id, playbook, playbook_uid, nombre_tarea, correcta, mensaje_error, fecha_ejecucion)
           VALUES (
             {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
             '{{ playbook_nombre }}',
             '{{ playbook_id }}',
             '{{ tarea_2 }}',
-            {{ 1 if resultado_tarea_2 is succeeded else 0 }},
-            '{{ "ok" if resultado_tarea_2 is succeeded else "error" }}',
+            {{ 0 if resultado_tarea_2.failed | default(false) else 1 }}
             '{{ resultado_tarea_2.msg | default("") }}',
             NOW()
           );
