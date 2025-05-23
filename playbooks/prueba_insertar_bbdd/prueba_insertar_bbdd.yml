@@ -15,4 +15,5 @@
         login_db: "{{ db_name }}"
         query: >
           INSERT INTO {{ db_table }} (equipo_id, nombre_tarea, correcta, resultado, fecha_ejecucion)
-          VALUES ({{ equipo_id }}, '{{ tarea_nombre }}', '{{ correcta }}', {{ resultado_ok }}, NOW());
+          VALUES ({{ equipo_id }}, '{{ tarea_nombre }}', '{{ correcta }}', '{{ resultado_ok }}', NOW());
+
