@@ -7,15 +7,27 @@
   vars:
     tarea_1: "Recolectar datos del sistema"
     tarea_2: "Crear usuario temporal"
-    tarea_nombre_base: "crear_usuario_temporal"
+    playbook_nombre: "crear_usuario_temporal"
 
   tasks:
+
+    - name: Generar UUID único para la ejecución del playbook
+      set_fact:
+        playbook_uid: "{{ lookup('community.general.uuid') }}"
+      run_once: true
 
     - name: Tarea 1 - Recolectar datos del sistema
       setup:
       register: resultado_tarea_1
       ignore_unreachable: true
       ignore_errors: true
+
+    - name: Preparar resultado tarea 1
+      set_fact:
+        tarea_nombre: "{{ tarea_1 }}"
+        correcta: "{{ 1 if resultado_tarea_1 is succeeded else 0 }}"
+        resultado: "{{ 'ok' if resultado_tarea_1 is succeeded else 'error' }}"
+        mensaje_error: "{{ resultado_tarea_1.msg | default('') }}"
 
     - name: Registrar resultado tarea 1 en BBDD
       community.mysql.mysql_query:
@@ -24,19 +36,21 @@
         login_password: "{{ db_password }}"
         login_db: "{{ db_name }}"
         query: >
-          INSERT INTO {{ db_table }}
-          (equipo_id, nombre_tarea, correcta, resultado, mensaje_error, fecha_ejecucion)
+          INSERT INTO {{ db_table }} (equipo_id, playbook, playbook_uid, nombre_tarea, correcta, resultado, mensaje_error, fecha_ejecucion)
           VALUES (
             {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
-            '{{ tarea_nombre_base }} - {{ tarea_1 }}',
-            {{ 1 if resultado_tarea_1 is succeeded else 0 }},
-            '{{ "ok" if resultado_tarea_1 is succeeded else "error" }}',
-            '{{ resultado_tarea_1.msg | default("Sin mensaje") }}',
+            '{{ playbook_nombre }}',
+            '{{ playbook_uid }}',
+            '{{ tarea_nombre }}',
+            {{ correcta }},
+            '{{ resultado }}',
+            '{{ mensaje_error }}',
             NOW()
           );
       delegate_to: localhost
       ignore_errors: true
 
+    # Repetimos patrón para tarea 2
     - name: Tarea 2 - Crear usuario temporal
       ansible.builtin.user:
         name: ansible_temp
@@ -51,6 +65,14 @@
       ignore_errors: true
       ignore_unreachable: true
 
+    - name: Preparar resultado tarea 2
+      set_fact:
+        tarea_nombre: "{{ tarea_2 }}"
+        correcta: "{{ 1 if resultado_tarea_2 is succeeded else 0 }}"
+        resultado: "{{ 'ok' if resultado_tarea_2 is succeeded else 'error' }}"
+        mensaje_error: "{{ resultado_tarea_2.msg | default('') }}"
+      when: resultado_tarea_2 is defined
+
     - name: Registrar resultado tarea 2 en BBDD
       community.mysql.mysql_query:
         login_host: "{{ db_host }}"
@@ -58,14 +80,15 @@
         login_password: "{{ db_password }}"
         login_db: "{{ db_name }}"
         query: >
-          INSERT INTO {{ db_table }}
-          (equipo_id, nombre_tarea, correcta, resultado, mensaje_error, fecha_ejecucion)
+          INSERT INTO {{ db_table }} (equipo_id, playbook, playbook_uid, nombre_tarea, correcta, resultado, mensaje_error, fecha_ejecucion)
           VALUES (
             {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
-            '{{ tarea_nombre_base }} - {{ tarea_2 }}',
-            {{ 1 if resultado_tarea_2 is succeeded else 0 }},
-            '{{ "ok" if resultado_tarea_2 is succeeded else "error" }}',
-            '{{ resultado_tarea_2.msg | default("Sin mensaje") }}',
+            '{{ playbook_nombre }}',
+            '{{ playbook_uid }}',
+            '{{ tarea_nombre }}',
+            {{ correcta }},
+            '{{ resultado }}',
+            '{{ mensaje_error }}',
             NOW()
           );
       delegate_to: localhost
