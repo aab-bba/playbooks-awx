@@ -20,18 +20,18 @@
 
     - name: Registrar resultado en la BBDD
       community.mysql.mysql_query:
-        login_user: "{{ hostvars['localhost']['db_user'] | default(db_user) }}"
-        login_password: "{{ hostvars['localhost']['db_password'] | default(db_password) }}"
+        login_user: "{{ hostvars['localhost']['db_user'] }}"
+        login_password: "{{ hostvars['localhost']['db_password'] }}"
         login_db: "{{ db_name }}"
         query: >
           INSERT INTO {{ db_table }} (equipo_id, nombre_tarea, estado, resultado_ok, fecha_ejecucion)
           VALUES (
-            '{{ hostvars[inventory_hostname].equipo_id }}',
+            '{{ hostvars[inventory_hostname].equipo_id | default("NULL") }}',
             '{{ tarea_nombre }}',
             '{{ "ok" if setup_result is succeeded else "error" }}',
             {{ 1 if setup_result is succeeded else 0 }},
             NOW()
           );
       delegate_to: localhost
-      run_once: false
-      when: "'equipo_id' in hostvars[inventory_hostname]"
+      when: "'db_user' in hostvars['localhost'] and 'db_password' in hostvars['localhost']"
+
