@@ -4,13 +4,8 @@
   gather_facts: no
   become: false
 
-  vars:
-    ansible_user: "{{ user }}"
-    ansible_password: "{{ password }}"
-    ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
-
   tasks:
-
+  
     - name: Recolectar datos del sistema
       setup:
       register: setup_result
@@ -19,7 +14,7 @@
     - name: Crear usuario temporal
       ansible.builtin.user:
         name: ansible_temp
-        password: "{{ ansible_temp_password | password_hash('sha512') }}"
+        password: "{{ ansible_temp_password }}"
         shell: /bin/bash
         groups: sudo
         append: yes
