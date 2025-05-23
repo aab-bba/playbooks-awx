@@ -8,9 +8,13 @@
     tarea_1: "Recolectar datos del sistema"
     tarea_2: "Crear usuario temporal"
     playbook_nombre: "crear_usuario_temporal"
-    playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"  # timestamp único por ejecución
 
   tasks:
+    - name: Generar timestamp único para esta ejecución
+      set_fact:
+        playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+      run_once: true  # Solo en un host (suficiente para obtener el ID)
+
     - name: Tarea 1 - Recolectar datos del sistema
       setup:
       register: resultado_tarea_1
