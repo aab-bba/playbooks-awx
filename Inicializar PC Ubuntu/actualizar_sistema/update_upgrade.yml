@@ -1,0 +1,30 @@
+- name: Actualizar sistema
+  hosts: all
+  become: true
+
+  vars:
+    db_name: aula_monitor
+    db_host: localhost
+    equipo_id: "{{ hostvars[inventory_hostname].equipo_id }}"
+
+  tasks:
+    - name: Ejecutar apt update + upgrade
+      ansible.builtin.shell: |
+        apt update && apt -y upgrade
+      register: update_result
+      ignore_errors: true
+
+    - name: Insertar resultado en la base de datos
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO tareas (equipo_id, tarea, resultado)
+          VALUES (
+            {{ equipo_id }},
+            'update && upgrade',
+            '{{ update_result.stdout | default("Sin salida") | replace("'", "''") }}'
+          )
+      delegate_to: localhost

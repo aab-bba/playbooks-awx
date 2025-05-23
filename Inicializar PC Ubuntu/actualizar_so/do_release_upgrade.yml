@@ -1,0 +1,30 @@
+- name: Comprobar nueva versión de Ubuntu y actualizar
+  hosts: all
+  become: true
+
+  vars:
+    db_name: aula_monitor
+    db_host: localhost
+    equipo_id: "{{ hostvars[inventory_hostname].equipo_id }}"
+
+  tasks:
+    - name: Ejecutar do-release-upgrade (automático)
+      ansible.builtin.shell: |
+        DEBIAN_FRONTEND=noninteractive do-release-upgrade -f DistUpgradeViewNonInteractive
+      register: release_result
+      ignore_errors: true
+
+    - name: Insertar resultado en la base de datos
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO tareas (equipo_id, tarea, resultado)
+          VALUES (
+            {{ equipo_id }},
+            'do-release-upgrade',
+            '{{ release_result.stdout | default("Sin salida") | replace("'", "''") }}'
+          )
+      delegate_to: localhost
