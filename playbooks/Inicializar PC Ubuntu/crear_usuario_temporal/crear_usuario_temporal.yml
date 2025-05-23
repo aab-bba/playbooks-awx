@@ -14,7 +14,7 @@
     - name: Crear usuario temporal
       ansible.builtin.user:
         name: ansible_temp
-        password: "{{ ansible_temp_password | password_hash('sha512') }}"
+        password: "{{ ansible_temp_password }}"
         shell: /bin/bash
         groups: sudo
         append: yes
@@ -33,7 +33,7 @@
       when: setup_result is defined
       ignore_errors: true
 
-    - name: Registrar resultados en la BBDD
+        - name: Registrar resultados en la BBDD
       community.mysql.mysql_query:
         login_host: "{{ db_host }}"
         login_user: "{{ db_user }}"
@@ -49,4 +49,8 @@
             NOW()
           );
       delegate_to: localhost
+      run_once: false
+      ignore_errors: true
+      ignore_unreachable: true
       when: hostvars[inventory_hostname].equipo_id is defined
+
