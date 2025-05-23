@@ -1,27 +1,36 @@
 ---
 - name: Añadir usuario temporal con sudo
-  hosts: all
+  hosts: pendientes
   gather_facts: no
-  ignore_unreachable: yes  # Esto es clave
+  become: false
 
   vars:
-    tarea_nombre: "crear_usuario_temporal"
-    db_name: "aula_monitor"
-    db_table: "tareas"
-    db_user: "{{ db_user }}"          # viene de la encuesta
-    db_password: "{{ db_password }}"  # viene de la encuesta
+    ansible_user: "{{ user }}"
+    ansible_password: "{{ password }}"
+    ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
 
   tasks:
 
     - name: Recolectar datos del sistema
       setup:
-      ignore_errors: yes  # Para que siga el play aunque falle
       register: setup_result
+      ignore_unreachable: true
+
+    - name: Crear usuario temporal
+      ansible.builtin.user:
+        name: ansible_temp
+        password: "{{ ansible_temp_password | password_hash('sha512') }}"
+        shell: /bin/bash
+        groups: sudo
+        append: yes
+        state: present
+      become: true
+      when: setup_result is succeeded
 
     - name: Registrar resultado en la BBDD
       community.mysql.mysql_query:
-        login_user: "{{ hostvars['localhost']['db_user'] }}"
-        login_password: "{{ hostvars['localhost']['db_password'] }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
         login_db: "{{ db_name }}"
         query: >
           INSERT INTO {{ db_table }} (equipo_id, nombre_tarea, estado, resultado_ok, fecha_ejecucion)
@@ -33,5 +42,4 @@
             NOW()
           );
       delegate_to: localhost
-      when: "'db_user' in hostvars['localhost'] and 'db_password' in hostvars['localhost']"
-
+      when: db_user is defined and db_password is defined
