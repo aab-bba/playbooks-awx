@@ -13,7 +13,7 @@
     - name: Generar timestamp único para esta ejecución
       set_fact:
         playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
-      run_once: true  # Solo en un host (suficiente para obtener el ID)
+      run_once: true
 
     - name: Tarea 1 - Recolectar datos del sistema
       setup:
@@ -34,7 +34,7 @@
             '{{ playbook_nombre }}',
             '{{ playbook_id }}',
             '{{ tarea_1 }}',
-            {{ 0 if resultado_tarea_1.failed | default(false) else 1 }}
+            {{ 0 if resultado_tarea_1.failed | default(false) else 1 }},
             '{{ resultado_tarea_1.msg | default("") }}',
             NOW()
           );
@@ -68,7 +68,7 @@
             '{{ playbook_nombre }}',
             '{{ playbook_id }}',
             '{{ tarea_2 }}',
-            {{ 0 if resultado_tarea_2.failed | default(false) else 1 }}
+            {{ 0 if resultado_tarea_2.failed | default(false) else 1 }},
             '{{ resultado_tarea_2.msg | default("") }}',
             NOW()
           );
