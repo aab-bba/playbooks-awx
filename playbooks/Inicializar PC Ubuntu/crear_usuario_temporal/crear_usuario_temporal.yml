@@ -23,7 +23,7 @@
 
     - name: Tarea 1.2 - Definir mensaje de ayuda si la tarea 1 falla
       set_fact:
-        help_message_1: "Instala openssh-server. Ejecuta localmente:\n sudo apt-get update \n sudo apt-get install openssh-server \n echo '{{ ansible_user }} ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/{{ ansible_user }}\n  sudo usermod -s /bin/bash {{ ansible_user }}"
+        help_message_1: "Instala openssh-server. Ejecuta localmente:\n sudo apt-get update \n sudo apt-get install openssh-server \n echo '{{ ansible_user }} ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/{{ ansible_user }} \n sudo usermod -s /bin/bash {{ ansible_user }}"
         is_ok_1: 0
       when: resultado_tarea_1.unreachable | default(false) or
             (resultado_tarea_1.rc is defined and resultado_tarea_1.rc != 0)
