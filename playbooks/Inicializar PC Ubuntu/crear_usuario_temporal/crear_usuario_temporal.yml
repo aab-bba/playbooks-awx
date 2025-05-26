@@ -28,7 +28,7 @@
         login_password: "{{ db_password }}"
         login_db: "{{ db_name }}"
         query: >
-          INSERT INTO {{ db_table }} (equipo_id, playbook, playbook_uid, nombre_tarea, correcta, mensaje_error, fecha_ejecucion)
+          INSERT INTO {{ db_table }} (host_id, playbook, playbook_uid, task_name, is_ok, error_message, help_message, created, modified)
           VALUES (
             {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
             '{{ playbook_nombre }}',
@@ -38,6 +38,8 @@
                 (resultado_tarea_1.rc is defined and resultado_tarea_2.rc != 0)
               else 1 }},
             '{{ resultado_tarea_1.msg | default("") }}',
+            'Instala openssh-server en el ordenador y abre el puerto 22 en el firewall',
+            NOW(),
             NOW()
           );
       delegate_to: localhost
@@ -64,7 +66,7 @@
         login_password: "{{ db_password }}"
         login_db: "{{ db_name }}"
         query: >
-          INSERT INTO {{ db_table }} (equipo_id, playbook, playbook_uid, nombre_tarea, correcta, mensaje_error, fecha_ejecucion)
+          INSERT INTO {{ db_table }} (host_id, playbook, playbook_uid, task_name, is_ok, error_message, created, modified)
           VALUES (
             {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
             '{{ playbook_nombre }}',
@@ -74,6 +76,7 @@
                 (resultado_tarea_2.rc is defined and resultado_tarea_2.rc != 0)
               else 1 }},
             '{{ resultado_tarea_2.msg | default("") }}',
+            NOW(),
             NOW()
           );
       delegate_to: localhost
