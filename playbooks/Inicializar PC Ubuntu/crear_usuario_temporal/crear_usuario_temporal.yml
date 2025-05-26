@@ -1,12 +1,11 @@
----
-- name: Añadir usuario temporal con sudo
+- name: Añadir usuario temporal con sudo y limpiar otros usuarios
   hosts: pendientes
   gather_facts: no
   become: false
 
   vars:
-    tarea_1: "Recolectar datos del sistema"
-    tarea_2: "Crear usuario temporal"
+    tarea_1: "Crear usuario temporal"
+    tarea_2: "Eliminar usuarios innecesarios"
     playbook_nombre: "crear_usuario_temporal"
 
   tasks:
@@ -15,37 +14,7 @@
         playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
       run_once: true
 
-    - name: Tarea 1 - Recolectar datos del sistema
-      setup:
-      register: resultado_tarea_1
-      ignore_unreachable: true
-      ignore_errors: true
-
-    - name: Registrar resultado tarea 1 en BBDD
-      community.mysql.mysql_query:
-        login_host: "{{ db_host }}"
-        login_user: "{{ db_user }}"
-        login_password: "{{ db_password }}"
-        login_db: "{{ db_name }}"
-        query: >
-          INSERT INTO {{ db_table }} (host_id, playbook, playbook_uid, task_name, is_ok, error_message, help_message, created, modified)
-          VALUES (
-            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
-            '{{ playbook_nombre }}',
-            '{{ playbook_id }}',
-            '{{ tarea_1 }}',
-            {{ 0 if (resultado_tarea_1.unreachable | default(false)) or
-                (resultado_tarea_1.rc is defined and resultado_tarea_2.rc != 0)
-              else 1 }},
-            '{{ resultado_tarea_1.msg | default("") }}',
-            'Instala openssh-server en el ordenador y abre el puerto 22 en el firewall',
-            NOW(),
-            NOW()
-          );
-      delegate_to: localhost
-      ignore_errors: true
-
-    - name: Tarea 2 - Crear usuario temporal
+    - name: Crear usuario temporal
       ansible.builtin.user:
         name: ansible_temp
         password: "{{ ansible_temp_password }}"
@@ -54,28 +23,81 @@
         append: yes
         state: present
       become: true
-      when: resultado_tarea_1 is succeeded
-      register: resultado_tarea_2
+      register: resultado_tarea_1
       ignore_errors: true
       ignore_unreachable: true
 
-    - name: Registrar resultado tarea 2 en BBDD
+    - name: Definir mensaje de ayuda si la tarea 1 falla
+      set_fact:
+        help_message_1: "Instala openssh-server y abre el puerto 22 en el firewall"
+        is_ok_1: 0
+      when: resultado_tarea_1.unreachable | default(false) or
+            (resultado_tarea_1.rc is defined and resultado_tarea_1.rc != 0)
+
+    - name: Registrar resultado tarea 1 en BBDD
       community.mysql.mysql_query:
         login_host: "{{ db_host }}"
         login_user: "{{ db_user }}"
         login_password: "{{ db_password }}"
         login_db: "{{ db_name }}"
         query: >
-          INSERT INTO {{ db_table }} (host_id, playbook, playbook_uid, task_name, is_ok, error_message, created, modified)
-          VALUES (
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
             {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
             '{{ playbook_nombre }}',
             '{{ playbook_id }}',
-            '{{ tarea_2 }}',
-            {{ 0 if (resultado_tarea_2.unreachable | default(false)) or
-                (resultado_tarea_2.rc is defined and resultado_tarea_2.rc != 0)
-              else 1 }},
-            '{{ resultado_tarea_2.msg | default("") }}',
+            '{{ tarea_1 }}',
+            {{ is_ok_1 | default(1) }},
+            '{{ resultado_tarea_1.msg | default("") }}',
+            '{{ help_message_1 | default("") }}',
+            NOW(),
+            NOW()
+          );
+      delegate_to: localhost
+      ignore_errors: true
+
+    - name: Obtener usuarios a eliminar
+      shell: |
+        awk -F: '$3 >= 1000 && $1 != "ansible_temp" && $1 != "root" && $1 != "nobody"' /etc/passwd | cut -d: -f1
+      register: usuarios_a_eliminar
+      changed_when: false
+      become: true
+
+    - name: Eliminar usuarios y registrar resultados
+      shell: |
+        for user in {{ usuarios_a_eliminar.stdout_lines | join(' ') }}; do
+          userdel -r $user
+        done
+      become: true
+      when: usuarios_a_eliminar.stdout_lines | length > 0
+      register: resultado_tarea_2
+      ignore_errors: true
+      ignore_unreachable: true
+
+    - name: Definir mensaje de ayuda si la tarea falla
+      set_fact:
+        help_message: "Verifica los permisos o si los usuarios están en uso por algún servicio."
+        is_ok: 0
+      when: resultado_tarea_2.failed | default(false)
+
+    - name: Registrar resultado de eliminación en BBDD
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            'Eliminar usuarios no deseados',
+            {{ 0 if resultado_tarea_2.failed | default(false) else 1 }},
+            '{{ usuarios_a_eliminar.stdout_lines | join(", ") | default("Ninguno") }}',
+            '{{ help_message | default("") }}',
             NOW(),
             NOW()
           );
