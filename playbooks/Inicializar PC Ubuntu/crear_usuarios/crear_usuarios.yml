@@ -1,0 +1,208 @@
+- name: Limpiar otros usuarios
+  hosts: pendientes
+  gather_facts: no
+  become: false
+
+  vars:
+    tarea_1: "Tarea 1 - Eliminar usuarios innecesarios"
+    tarea_2: "Tarea 2 - Crear usuario admin, con ssh, acceso sudo "
+    tarea_3: "Tarea 3 - Crear usuario alumno"
+    playbook_nombre: "crear_usuario_temporal"
+
+  tasks:
+    - name: Tarea 0 - Generar timestamp único para esta ejecución
+      set_fact:
+        playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+      run_once: true
+
+    - name: Tarea 1.1 - Obtener usuarios a eliminar
+      shell: |
+        awk -F: '$3 >= 1000 && $1 != "ansible_temp" && $1 != "root" && $1 != "nobody"' /etc/passwd | cut -d: -f1
+      register: usuarios_a_eliminar
+      changed_when: false
+      become: true
+
+    - name: Tarea 1.2 - Eliminar usuarios y registrar resultados
+      shell: |
+        for user in {{ usuarios_a_eliminar.stdout_lines | join(' ') }}; do
+          userdel -r $user
+        done
+      become: true
+      when: usuarios_a_eliminar.stdout_lines | length > 0
+      register: resultado_tarea_1
+      ignore_errors: true
+      ignore_unreachable: true
+
+    - name: Tarea 1.3 - Definir mensaje de ayuda si la tarea falla
+      set_fact:
+        help_message_3: "Verifica los permisos o si los usuarios están en uso por algún servicio."
+        is_ok_3: 0
+      when: resultado_tarea_1.unreachable | default(false) or
+            (resultado_tarea_1.rc is defined and resultado_tarea_1.rc != 0)
+
+    - name: Tarea 1.4 - Registrar resultado de eliminación en BBDD
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            'Eliminar usuarios no deseados',
+            {{ is_ok_3 | default(1) }},
+            'Usuarios a eliminar: {{ usuarios_a_eliminar.stdout_lines | join(", ") | default("Ninguno") }}. Resultado: {{ resultado_tarea_1 | to_json | replace("'", "''") }}',
+            '{{ help_message_3 | default("")  | replace("'", "''") }}',
+            NOW(),
+            NOW()
+          );
+      delegate_to: localhost
+      ignore_errors: false
+
+
+
+    - name: Tarea 2.1 - Crear usuario admin y configurar acceso
+      block:
+
+        - name: Hashear contraseña del usuario admin
+          set_fact:
+            admin_password_hash: "{{ admin_password | password_hash('sha512') }}"
+
+        - name: Crear usuario admin
+          ansible.builtin.user:
+            name: admin
+            password: "{{ admin_password_hash }}"
+            shell: /usr/sbin/nologin
+            groups: sudo
+            append: yes
+            state: present
+          become: true
+          register: resultado_tarea_2
+          ignore_errors: true
+          ignore_unreachable: true
+
+        - name: Añadir clave pública SSH para admin
+          ansible.posix.authorized_key:
+            user: admin
+            key: "{{ admin_ssh_key }}"
+            state: present
+          become: true
+          when: resultado_tarea_2.rc is defined and resultado_tarea_2.rc == 0
+
+        - name: Asegurar línea de restricción en access.conf
+          ansible.builtin.lineinfile:
+            path: /etc/security/access.conf
+            line: "-:admin:LOCAL"
+            create: yes
+            state: present
+          become: true
+
+        - name: Descomentar 'account required pam_access.so' en pam.d/login
+          ansible.builtin.lineinfile:
+            path: /etc/pam.d/login
+            regexp: '^#\s*(account\s+required\s+pam_access\.so)'
+            line: '\1'
+            backrefs: yes
+          become: true
+
+        - name: Permitir sudo sin contraseña al usuario admin
+          ansible.builtin.copy:
+            dest: /etc/sudoers.d/admin
+            content: "admin ALL=(ALL) NOPASSWD: ALL\n"
+            mode: '0440'
+          become: true
+
+        - name: Establecer shell final /bin/bash al usuario admin
+          ansible.builtin.user:
+            name: admin
+            shell: /bin/bash
+          become: true
+
+      rescue:
+        - set_fact:
+            help_message_2: "Error al crear o configurar completamente el usuario admin."
+            is_ok_2: 0
+
+    - name: Tarea 2.2 - Registrar resultado creación y configuración de admin en BBDD
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_2 }}',
+            {{ is_ok_2 | default(1) }},
+            '{{ resultado_tarea_2 | to_json | replace("'", "''") }}',
+            '{{ help_message_2 | default("") | replace("'", "''") }}',
+            NOW(),
+            NOW()
+          );
+      delegate_to: localhost
+      ignore_errors: false
+
+
+
+    - name: Tarea 3.1 - Asegurar grupo 'alumno' existe
+      ansible.builtin.group:
+        name: alumno
+        state: present
+      become: true
+
+    - name: Tarea 3.2 - Crear usuario alumno sin sudo
+      block:
+        - name: Hashear contraseña del alumno
+          set_fact:
+            alumno_password_hash: "{{ alumno_password | password_hash('sha512') }}"
+
+        - name: Crear usuario alumno
+          ansible.builtin.user:
+            name: alumno
+            password: "{{ alumno_password_hash }}"
+            shell: /bin/bash
+            groups: alumno
+            append: yes
+            state: present
+          become: true
+          register: resultado_tarea_3
+          ignore_errors: true
+          ignore_unreachable: true
+      rescue:
+        - set_fact:
+            help_message_3: "Error al crear el usuario alumno. Verifica si el grupo alumno existe o si hay conflictos."
+            is_ok_3: 0
+
+    - name: Tarea 3.3 - Registrar resultado creación alumno en BBDD
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_3 }}',
+            {{ is_ok_3 | default(1) }},
+            '{{ resultado_tarea_3 | to_json | replace("'", "''") }}',
+            '{{ help_message_3 | default("") | replace("'", "''") }}',
+            NOW(),
+            NOW()
+          );
+      delegate_to: localhost
+      ignore_errors: false
+
+
+
