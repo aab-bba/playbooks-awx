@@ -28,7 +28,7 @@
       when: resultado_tarea_1.unreachable | default(false) or
             (resultado_tarea_1.rc is defined and resultado_tarea_1.rc != 0)
 
-    - name: Tarea 2 - Registrar resultado tarea 1 en BBDD
+    - name: Tarea 1.3 - Registrar resultado tarea 1 en BBDD
       community.mysql.mysql_query:
         login_host: "{{ db_host }}"
         login_user: "{{ db_user }}"
@@ -44,7 +44,7 @@
             'Verificar acceso sudo sin contraseña',
             {{ is_ok_1 | default(1) }},
             '{{ resultado_tarea_1 | to_json | replace("'", "\\'") }}',
-            '{{ help_message_1 | default("") }}',
+            '{{ help_message_1 | default("") | replace("'", "\\'") }}',
             NOW(),
             NOW()
           );
