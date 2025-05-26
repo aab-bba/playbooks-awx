@@ -23,7 +23,7 @@
 
     - name: Tarea 1.2 - Definir mensaje de ayuda si la tarea 1 falla
       set_fact:
-        help_message_1: "Ejecuta localmente:\n  echo 'admin ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/admin\n  sudo usermod -s /bin/bash admin"
+        help_message_1: "Instala openssh-server. Ejecuta localmente:\n sudo apt-get update \n sudo apt-get install openssh-server \n echo '{{ ansible_user }} ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/{{ ansible_user }}\n  sudo usermod -s /bin/bash {{ ansible_user }}"
         is_ok_1: 0
       when: resultado_tarea_1.unreachable | default(false) or
             (resultado_tarea_1.rc is defined and resultado_tarea_1.rc != 0)
@@ -67,7 +67,7 @@
 
     - name: Tarea 2.2 - Definir mensaje de ayuda si la tarea 2 falla
       set_fact:
-        help_message_2: "Instala openssh-server y abre el puerto 22 en el firewall"
+        help_message_2: ""
         is_ok_2: 0
       when: resultado_tarea_2.unreachable | default(false) or
             (resultado_tarea_2.rc is defined and resultado_tarea_2.rc != 0)
