@@ -43,13 +43,14 @@
             '{{ playbook_id }}',
             'Verificar acceso sudo sin contraseña',
             {{ is_ok_1 | default(1) }},
-            '{{ resultado_tarea_1 | to_json | replace("'", "\\'") }}',
-            '{{ help_message_1 | default("") | replace("'", "\\'") }}',
+            '{{ resultado_tarea_1 | to_json | replace("'", "''") }}',
+            '{{ help_message_1 | default("") | replace("'", "''") }}',
             NOW(),
             NOW()
           );
       delegate_to: localhost
-      ignore_errors: true
+      ignore_errors: false
+
 
     - name: Tarea 2.1 - Crear usuario temporal
       ansible.builtin.user:
@@ -92,7 +93,7 @@
             NOW()
           );
       delegate_to: localhost
-      ignore_errors: true
+      ignore_errors: false
 
     - name: Tarea 3.1 - Obtener usuarios a eliminar
       shell: |
@@ -139,4 +140,4 @@
             NOW()
           );
       delegate_to: localhost
-      ignore_errors: true
+      ignore_errors: false
