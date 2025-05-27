@@ -65,7 +65,7 @@
 # ---------- ANDROID STUDIO ----------
     - name: Tarea 2.1 - Descargar Android Studio
       get_url:
-        url: https://redirector.gvt1.com/edgedl/android/studio/ide-zips/2024.1.1.20/android-studio-2024.1.1.20-linux.tar.gz
+        url: "{{ android_studio_url }}"
         dest: /tmp/android-studio.tar.gz
       register: resultado_tarea_2
       ignore_errors: true
