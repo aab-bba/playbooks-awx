@@ -42,10 +42,10 @@
         - name: Tarea 1.2 - Registrar resultado de la configuración del repositorio en BBDD
           delegate_to: localhost
           community.mysql.mysql_query:
-            login_db: "{{ bbdd_name }}"
-            login_user: "{{ bbdd_user }}"
-            login_password: "{{ bbdd_password }}"
-            login_host: "{{ bbdd_host }}"
+            login_db: "{{ db_name }}"
+            login_user: "{{ db_user }}"
+            login_password: "{{ db_password }}"
+            login_host: "{{ db_host }}"
             query: |
               INSERT INTO tasks (
                 host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
