@@ -1,30 +1,171 @@
-- name: Actualizar sistema
-  hosts: all
+- name: Actualizar y limpiar sistema
+  hosts: pendientes
+  gather_facts: no
   become: true
 
   vars:
-    db_name: aula_monitor
-    db_host: localhost
-    equipo_id: "{{ hostvars[inventory_hostname].equipo_id }}"
+    playbook_nombre: "actualizar_sistema"
+    tarea_1: "Tarea 1 - apt update"
+    tarea_2: "Tarea 2 - full-upgrade"
+    tarea_3: "Tarea 3 - clean y autoremove"
+    tarea_4: "Tarea 4 - Reinicio si necesario"
 
   tasks:
-    - name: Ejecutar apt update + upgrade
-      ansible.builtin.shell: |
-        apt update && apt -y upgrade
-      register: update_result
+    - name: Tarea 0 - Generar timestamp único para esta ejecución
+      set_fact:
+        playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+      run_once: true
+
+# ---------------- APT UPDATE ----------------
+    - name: Tarea 1.1 - Ejecutar apt update
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 0
+      register: resultado_tarea_1
       ignore_errors: true
 
-    - name: Insertar resultado en la base de datos
+    - name: Tarea 1.2 - Mensaje de ayuda si falla apt update
+      set_fact:
+        help_message_1: "Verifica conectividad, DNS o fuentes en /etc/apt/sources.list"
+        is_ok_1: 0
+      when: resultado_tarea_1.unreachable | default(false) or
+            (resultado_tarea_1.rc is defined and resultado_tarea_1.rc != 0)
+
+    - name: Tarea 1.3 - Registrar resultado en BBDD
       community.mysql.mysql_query:
         login_host: "{{ db_host }}"
         login_user: "{{ db_user }}"
         login_password: "{{ db_password }}"
         login_db: "{{ db_name }}"
         query: >
-          INSERT INTO tareas (equipo_id, tarea, resultado)
-          VALUES (
-            {{ equipo_id }},
-            'update && upgrade',
-            '{{ update_result.stdout | default("Sin salida") | replace("'", "''") }}'
-          )
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_1 }}',
+            {{ is_ok_1 | default(1) }},
+            '{{ resultado_tarea_1 | to_json | replace("'", "''") }}',
+            '{{ help_message_1 | default("") | replace("'", "''") }}',
+            NOW(),
+            NOW()
+          );
+      delegate_to: localhost
+
+# ---------------- UPGRADE ----------------
+    - name: Tarea 2.1 - Ejecutar full-upgrade
+      ansible.builtin.apt:
+        upgrade: full
+      register: resultado_tarea_2
+      ignore_errors: true
+
+    - name: Tarea 2.2 - Mensaje de ayuda si falla upgrade
+      set_fact:
+        help_message_2: "Verifica espacio en disco o dependencias rotas. Usa apt --fix-broken install."
+        is_ok_2: 0
+      when: resultado_tarea_2.unreachable | default(false) or
+            (resultado_tarea_2.rc is defined and resultado_tarea_2.rc != 0)
+
+    - name: Tarea 2.3 - Registrar resultado upgrade en BBDD
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_2 }}',
+            {{ is_ok_2 | default(1) }},
+            '{{ resultado_tarea_2 | to_json | replace("'", "''") }}',
+            '{{ help_message_2 | default("") | replace("'", "''") }}',
+            NOW(),
+            NOW()
+          );
+      delegate_to: localhost
+
+# ---------------- CLEAN & AUTOREMOVE ----------------
+    - name: Tarea 3.1 - Ejecutar clean y autoremove
+      ansible.builtin.shell: |
+        apt clean && apt autoremove -y
+      register: resultado_tarea_3
+      changed_when: true
+      ignore_errors: true
+
+    - name: Tarea 3.2 - Mensaje de ayuda si falla clean/autoremove
+      set_fact:
+        help_message_3: "Verifica bloqueos con dpkg o falta de permisos."
+        is_ok_3: 0
+      when: resultado_tarea_3.unreachable | default(false) or
+            (resultado_tarea_3.rc is defined and resultado_tarea_3.rc != 0)
+
+    - name: Tarea 3.3 - Registrar resultado en BBDD
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_3 }}',
+            {{ is_ok_3 | default(1) }},
+            '{{ resultado_tarea_3 | to_json | replace("'", "''") }}',
+            '{{ help_message_3 | default("") | replace("'", "''") }}',
+            NOW(),
+            NOW()
+          );
+      delegate_to: localhost
+
+# ---------------- REBOOT IF NEEDED ----------------
+    - name: Tarea 4.1 - Verificar si se requiere reinicio
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+
+    - name: Tarea 4.2 - Reiniciar si es necesario
+      ansible.builtin.reboot:
+        msg: "Reinicio requerido por actualizaciones"
+        connect_timeout: 5
+        reboot_timeout: 300
+      when: reboot_required.stat.exists
+      register: resultado_tarea_4
+      ignore_errors: true
+
+    - name: Tarea 4.3 - Mensaje de ayuda si el reboot falla
+      set_fact:
+        help_message_4: "No se pudo reiniciar. Verifica procesos en ejecución o acceso sudo."
+        is_ok_4: 0
+      when: resultado_tarea_4.unreachable | default(false) or
+            (resultado_tarea_4.rc is defined and resultado_tarea_4.rc != 0)
+
+    - name: Tarea 4.4 - Registrar resultado del reinicio
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_4 }}',
+            {{ is_ok_4 | default(1) }},
+            '{{ resultado_tarea_4 | default({"msg": "No se requería reinicio"}) | to_json | replace("'", "''") }}',
+            '{{ help_message_4 | default("") | replace("'", "''") }}',
+            NOW(),
+            NOW()
+          );
       delegate_to: localhost
