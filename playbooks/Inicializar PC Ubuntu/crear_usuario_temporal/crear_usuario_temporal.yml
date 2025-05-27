@@ -81,7 +81,7 @@
         group: root
         mode: '0440'
       become: true
-      when: resultado_tarea_2.rc is defined and resultado_tarea_2.rc == 0
+      when: resultado_tarea_2 is defined and not resultado_tarea_2.failed | default(false)
 
     - name: Tarea 2.4 - Definir mensaje de ayuda si la tarea 2 falla
       set_fact:
