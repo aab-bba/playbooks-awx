@@ -97,7 +97,7 @@
         msg: "Reinicio tras do-release-upgrade"
         connect_timeout: 5
         reboot_timeout: 600
-      when: resultado_tarea_2 is defined and resultado_tarea_2.rc == 0
+      when: resultado_tarea_2 is defined and ('rc' in resultado_tarea_2) and resultado_tarea_2.rc == 0
       register: resultado_tarea_3
       ignore_errors: true
 
@@ -105,8 +105,10 @@
       set_fact:
         is_ok_3: 0
         help_message_3: "Verifica si el sistema quedó en estado inestable tras el upgrade."
-      when: resultado_tarea_3.unreachable | default(false) or
-            (resultado_tarea_3.rc is defined and resultado_tarea_3.rc != 0)
+      when: resultado_tarea_3 is defined and (
+              resultado_tarea_3.unreachable | default(false) or
+              ('rc' in resultado_tarea_3 and resultado_tarea_3.rc != 0)
+            )
 
     - name: Tarea 3.3 - Registrar reinicio en BBDD
       community.mysql.mysql_query:
@@ -123,7 +125,7 @@
             '{{ playbook_id }}',
             '{{ tarea_3 }}',
             {{ is_ok_3 | default(1) }},
-            '{{ {"msg": resultado_tarea_3.msg | default("No reinicio necesario")} | to_json | replace("'", "''") }}',
+            '{{ {"msg": resultado_tarea_3.msg | default("No se ejecutó reinicio")} | to_json | replace("'", "''") }}',
             '{{ help_message_3 | default("") | replace("'", "''") }}',
             NOW(),
             NOW()
