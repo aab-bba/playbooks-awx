@@ -83,7 +83,7 @@
             '{{ playbook_id }}',
             '{{ tarea_2 }}',
             {{ is_ok_2 | default(1) }},
-            '{{ {"stdout": resultado_tarea_2.stdout | default(""), "stderr": resultado_tarea_2.stderr | default(""), "rc": resultado_tarea_2.rc | default(-1)} | to_json | replace("'", "''") }}'
+            '{{ {"stdout": resultado_tarea_2.stdout | default(""), "stderr": resultado_tarea_2.stderr | default(""), "rc": resultado_tarea_2.rc | default(-1)} | to_json | replace("'", "''") }}',
             '{{ help_message_2 | default("") | replace("'", "''") }}',
             NOW(),
             NOW()
