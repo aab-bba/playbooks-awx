@@ -6,7 +6,7 @@
   vars:
     tarea_1: "Tarea 1 - Comprobar acceso sudo"
     tarea_2: "Tarea 2 - Crear usuario temporal"
-    playbook_nombre: "crear_usuario_temporal"
+    playbook_nombre: "FU01 - crear_usuario_temporal"
 
   tasks:
     - name: Tarea 0 - Generar timestamp único para esta ejecución

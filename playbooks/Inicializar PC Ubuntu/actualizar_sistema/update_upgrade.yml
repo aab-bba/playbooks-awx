@@ -4,7 +4,7 @@
   become: true
 
   vars:
-    playbook_nombre: "actualizar_sistema"
+    playbook_nombre: "FU03 - actualizar_sistema"
     tarea_1: "Tarea 1 - apt update"
     tarea_2: "Tarea 2 - full-upgrade"
     tarea_3: "Tarea 3 - clean y autoremove"

@@ -7,7 +7,7 @@
     tarea_1: "Tarea 1 - Eliminar usuarios innecesarios"
     tarea_2: "Tarea 2 - Crear usuario admin, con ssh, acceso sudo "
     tarea_3: "Tarea 3 - Crear usuario alumno"
-    playbook_nombre: "crear_usuario_temporal"
+    playbook_nombre: "FU02 - crear_usuario_temporal"
 
   tasks:
     - name: Tarea 0 - Generar timestamp único para esta ejecución
