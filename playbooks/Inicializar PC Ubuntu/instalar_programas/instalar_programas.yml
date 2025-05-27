@@ -31,7 +31,7 @@
             repo: "deb [arch=amd64] https://packages.microsoft.com/repos/code stable main"
             filename: 'vscode'
             state: present
-          register: resultado_añadir_repo
+          register: resultado_anadir_repo
 
       rescue:
         - name: Mensaje de ayuda si falla la configuración del repositorio de VSCode
@@ -54,9 +54,9 @@
                 'instalar_programas',
                 '{{ timestamp_unico }}',
                 'Tarea 1.1 - Configurar repositorio VSCode',
-                {{ (resultado_añadir_repo is defined and resultado_añadir_repo.failed | default(false) == false) | int }},
-                '{{ resultado_añadir_repo.msg | default("OK") }}',
-                '{% if resultado_añadir_repo is not defined or resultado_añadir_repo.failed | default(false) %}Error al añadir el repositorio de VSCode. Verifica la clave o la URL.{% else %}OK{% endif %}',
+                {{ (resultado_anadir_repo is defined and resultado_anadir_repo.failed | default(false) == false) | int }},
+                '{{ resultado_anadir_repo.msg | default("OK") }}',
+                '{% if resultado_anadir_repo is not defined or resultado_anadir_repo.failed | default(false) %}Error al añadir el repositorio de VSCode. Verifica la clave o la URL.{% else %}OK{% endif %}',
                 now(),
                 now()
               )
