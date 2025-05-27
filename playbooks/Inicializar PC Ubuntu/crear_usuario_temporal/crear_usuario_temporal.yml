@@ -56,11 +56,14 @@
       delegate_to: localhost
       ignore_errors: false
 
+    - name: Tarea 2.1 - Hashear contraseña para ansible_temp
+      set_fact:
+        ansible_temp_password_hash: "{{ ansible_temp_password | password_hash('sha512') }}"
 
-    - name: Tarea 2.1 - Crear usuario temporal
+    - name: Tarea 2.2 - Crear usuario temporal ansible_temp
       ansible.builtin.user:
         name: ansible_temp
-        password: "{{ ansible_temp_password  | password_hash('sha512') }}"
+        password: "{{ ansible_temp_password_hash }}"
         shell: /bin/bash
         groups: sudo
         append: yes
@@ -70,14 +73,24 @@
       ignore_errors: true
       ignore_unreachable: true
 
-    - name: Tarea 2.2 - Definir mensaje de ayuda si la tarea 2 falla
+    - name: Tarea 2.3 - Permitir sudo sin contraseña a ansible_temp
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/ansible_temp
+        content: "ansible_temp ALL=(ALL) NOPASSWD: ALL\n"
+        owner: root
+        group: root
+        mode: '0440'
+      become: true
+      when: resultado_tarea_2.rc is defined and resultado_tarea_2.rc == 0
+
+    - name: Tarea 2.4 - Definir mensaje de ayuda si la tarea 2 falla
       set_fact:
         help_message_2: "Error al crear el usuario ansible_temp. Verifica permisos, existencia del usuario o problemas con el paquete sudo."
         is_ok_2: 0
       when: resultado_tarea_2.unreachable | default(false) or
             (resultado_tarea_2.rc is defined and resultado_tarea_2.rc != 0)
 
-    - name: Tarea 2.3 - Registrar resultado tarea 2 en BBDD
+    - name: Tarea 2.5 - Registrar resultado tarea 2 en BBDD
       community.mysql.mysql_query:
         login_host: "{{ db_host }}"
         login_user: "{{ db_user }}"
