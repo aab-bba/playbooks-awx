@@ -1,13 +1,14 @@
-- name: Instalar VS Code, Android Studio y VirtualBox
+- name: Instalar programas de desarrollo
   hosts: pendientes
   gather_facts: no
   become: true
 
   vars:
     playbook_nombre: "FU05 - instalar_programas"
-    tarea_1: "Tarea 1 - Instalar VS Code"
+    tarea_1: "Tarea 1 - Instalar Visual Studio Code"
     tarea_2: "Tarea 2 - Instalar Android Studio"
     tarea_3: "Tarea 3 - Instalar VirtualBox"
+    tarea_4: "Tarea 4 - Crear accesos directos"
 
   tasks:
     - name: Tarea 0 - Generar timestamp único para esta ejecución
@@ -15,33 +16,35 @@
         playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
       run_once: true
 
-# ---------- VS CODE ----------
-    - name: Tarea 1.1 - Añadir repositorio de VS Code
-      shell: |
-        wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/microsoft.gpg
-        echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list
-      args:
-        executable: /bin/bash
-      register: resultado_repo_vscode
-      changed_when: true
+# ---------- VISUAL STUDIO CODE ----------
+    - name: Tarea 1.1 - Importar clave y añadir repo VSCode
+      block:
+        - name: Importar clave GPG
+          shell: rpm --import https://packages.microsoft.com/keys/microsoft.asc
+          args:
+            warn: false
+
+        - name: Añadir repositorio VSCode
+          copy:
+            dest: /etc/yum.repos.d/vscode.repo
+            content: |
+              [code]
+              name=Visual Studio Code
+              baseurl=https://packages.microsoft.com/yumrepos/vscode
+              enabled=1
+              gpgcheck=1
+              gpgkey=https://packages.microsoft.com/keys/microsoft.asc
+      register: resultado_tarea_1
       ignore_errors: true
 
-    - name: Tarea 1.2 - Instalar VS Code
-      ansible.builtin.apt:
+    - name: Tarea 1.2 - Instalar VSCode
+      dnf:
         name: code
-        update_cache: yes
         state: present
       register: resultado_tarea_1
       ignore_errors: true
 
-    - name: Tarea 1.3 - Mensaje de ayuda si falla VS Code
-      set_fact:
-        help_message_1: "Verifica conectividad o que se haya añadido correctamente el repositorio de Microsoft."
-        is_ok_1: 0
-      when: resultado_tarea_1.unreachable | default(false) or
-            (resultado_tarea_1.rc is defined and resultado_tarea_1.rc != 0)
-
-    - name: Tarea 1.4 - Registrar resultado en BBDD
+    - name: Tarea 1.3 - Registrar instalación VSCode en BBDD
       community.mysql.mysql_query:
         login_host: "{{ db_host }}"
         login_user: "{{ db_user }}"
@@ -55,31 +58,37 @@
             '{{ playbook_nombre }}',
             '{{ playbook_id }}',
             '{{ tarea_1 }}',
-            {{ is_ok_1 | default(1) }},
+            {{ 0 if resultado_tarea_1.rc is defined and resultado_tarea_1.rc != 0 else 1 }},
             '{{ resultado_tarea_1 | to_json | replace("'", "''") }}',
-            '{{ help_message_1 | default("") | replace("'", "''") }}',
-            NOW(), NOW()
+            'Verifica repo Microsoft y conexión a internet.',
+            NOW(),
+            NOW()
           );
       delegate_to: localhost
       become: false
 
 # ---------- ANDROID STUDIO ----------
-    - name: Tarea 2.1 - Instalar Android Studio vía Snap
-      community.general.snap:
-        name: android-studio
-        classic: yes
-        state: present
+    - name: Tarea 2.1 - Descargar Android Studio
+      get_url:
+        url: https://redirector.gvt1.com/edgedl/android/studio/ide-zips/2024.1.1.20/android-studio-2024.1.1.20-linux.tar.gz
+        dest: /tmp/android-studio.tar.gz
       register: resultado_tarea_2
       ignore_errors: true
 
-    - name: Tarea 2.2 - Mensaje de ayuda si falla Android Studio
-      set_fact:
-        help_message_2: "Verifica que Snap esté instalado y funcionando correctamente."
-        is_ok_2: 0
-      when: resultado_tarea_2.unreachable | default(false) or
-            (resultado_tarea_2.rc is defined and resultado_tarea_2.rc != 0)
+    - name: Tarea 2.2 - Extraer Android Studio
+      unarchive:
+        src: /tmp/android-studio.tar.gz
+        dest: /opt/
+        remote_src: yes
+      when: resultado_tarea_2 is succeeded
 
-    - name: Tarea 2.3 - Registrar resultado en BBDD
+    - name: Tarea 2.3 - Crear enlace simbólico
+      file:
+        src: /opt/android-studio/bin/studio.sh
+        dest: /usr/local/bin/android-studio
+        state: link
+
+    - name: Tarea 2.4 - Registrar instalación Android Studio en BBDD
       community.mysql.mysql_query:
         login_host: "{{ db_host }}"
         login_user: "{{ db_user }}"
@@ -93,31 +102,33 @@
             '{{ playbook_nombre }}',
             '{{ playbook_id }}',
             '{{ tarea_2 }}',
-            {{ is_ok_2 | default(1) }},
+            {{ 0 if resultado_tarea_2.rc is defined and resultado_tarea_2.rc != 0 else 1 }},
             '{{ resultado_tarea_2 | to_json | replace("'", "''") }}',
-            '{{ help_message_2 | default("") | replace("'", "''") }}',
-            NOW(), NOW()
+            'Verifica URL oficial o permisos en /opt.',
+            NOW(),
+            NOW()
           );
       delegate_to: localhost
       become: false
 
 # ---------- VIRTUALBOX ----------
-    - name: Tarea 3.1 - Instalar VirtualBox
-      ansible.builtin.apt:
-        name: virtualbox
+    - name: Tarea 3.1 - Instalar dependencias VirtualBox
+      dnf:
+        name:
+          - gcc
+          - make
+          - perl
+          - kernel-devel
         state: present
-        update_cache: yes
+
+    - name: Tarea 3.2 - Instalar VirtualBox
+      dnf:
+        name: VirtualBox
+        state: present
       register: resultado_tarea_3
       ignore_errors: true
 
-    - name: Tarea 3.2 - Mensaje de ayuda si falla VirtualBox
-      set_fact:
-        help_message_3: "Verifica que el kernel tenga soporte o que el repositorio esté disponible."
-        is_ok_3: 0
-      when: resultado_tarea_3.unreachable | default(false) or
-            (resultado_tarea_3.rc is defined and resultado_tarea_3.rc != 0)
-
-    - name: Tarea 3.3 - Registrar resultado en BBDD
+    - name: Tarea 3.3 - Registrar instalación VirtualBox en BBDD
       community.mysql.mysql_query:
         login_host: "{{ db_host }}"
         login_user: "{{ db_user }}"
@@ -131,10 +142,69 @@
             '{{ playbook_nombre }}',
             '{{ playbook_id }}',
             '{{ tarea_3 }}',
-            {{ is_ok_3 | default(1) }},
+            {{ 0 if resultado_tarea_3.rc is defined and resultado_tarea_3.rc != 0 else 1 }},
             '{{ resultado_tarea_3 | to_json | replace("'", "''") }}',
-            '{{ help_message_3 | default("") | replace("'", "''") }}',
-            NOW(), NOW()
+            'Verifica kernel headers instalados y que el repositorio esté disponible.',
+            NOW(),
+            NOW()
           );
       delegate_to: localhost
       become: false
+
+# ---------- ACCESOS DIRECTOS ----------
+    - name: Tarea 4.1 - Crear carpeta de accesos directos si no existe
+      file:
+        path: /home/alumno/.local/share/applications
+        state: directory
+        owner: alumno
+        group: alumno
+        mode: '0755'
+
+    - name: Tarea 4.2 - Crear acceso directo a Android Studio
+      copy:
+        dest: /home/alumno/.local/share/applications/android-studio.desktop
+        content: |
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=Android Studio
+          Exec=/usr/local/bin/android-studio
+          Icon=/opt/android-studio/bin/studio.png
+          Terminal=false
+          Categories=Development;IDE;
+        owner: alumno
+        group: alumno
+        mode: '0755'
+
+    - name: Tarea 4.3 - Crear acceso directo a VSCode
+      copy:
+        dest: /home/alumno/.local/share/applications/vscode.desktop
+        content: |
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=Visual Studio Code
+          Exec=/usr/bin/code
+          Icon=code
+          Terminal=false
+          Categories=Development;IDE;
+        owner: alumno
+        group: alumno
+        mode: '0755'
+
+    - name: Tarea 4.4 - Crear acceso directo a VirtualBox
+      copy:
+        dest: /home/alumno/.local/share/applications/virtualbox.desktop
+        content: |
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=VirtualBox
+          Exec=/usr/bin/virtualbox
+          Icon=virtualbox
+          Terminal=false
+          Categories=System;Emulator;Virtualization;
+        owner: alumno
+        group: alumno
+        mode: '0755'
+
