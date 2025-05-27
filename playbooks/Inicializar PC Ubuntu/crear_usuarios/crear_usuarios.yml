@@ -53,7 +53,7 @@
             {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
             '{{ playbook_nombre }}',
             '{{ playbook_id }}',
-            'Eliminar usuarios no deseados',
+            '{{ tarea_1 }}',
             {{ is_ok_3 | default(1) }},
             'Usuarios a eliminar: {{ usuarios_a_eliminar.stdout_lines | join(", ") | default("Ninguno") }}. Resultado: {{ resultado_tarea_1 | to_json | replace("'", "''") }}',
             '{{ help_message_3 | default("")  | replace("'", "''") }}',
