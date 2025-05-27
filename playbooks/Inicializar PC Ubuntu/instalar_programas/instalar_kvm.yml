@@ -1,0 +1,106 @@
+- name: Instalar KVM + QEMU + Virt-Manager
+  hosts: pendientes
+  gather_facts: yes
+  become: true
+
+  vars:
+    playbook_nombre: "FU06 - instalar_kvm_qemu"
+    tarea_1: "Tarea 1 - Instalar KVM y Virt-Manager"
+    tarea_2: "Tarea 2 - Configurar permisos libvirt"
+    tarea_3: "Tarea 3 - Acceso directo a Virt-Manager"
+
+  tasks:
+    - name: Tarea 0 - Generar timestamp único para esta ejecución
+      set_fact:
+        playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+      run_once: true
+
+    - name: Tarea 1.1 - Instalar paquetes necesarios
+      apt:
+        name:
+          - qemu-kvm
+          - libvirt-daemon-system
+          - libvirt-clients
+          - bridge-utils
+          - virt-manager
+        state: present
+        update_cache: yes
+      register: resultado_tarea_1
+      ignore_errors: true
+
+    - name: Tarea 1.2 - Registrar instalación en BBDD
+      delegate_to: localhost
+      become: false
+      community.mysql.mysql_query:
+        login_db: "{{ db_name }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_host: "{{ db_host }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_1 }}',
+            {{ 0 if resultado_tarea_1.rc is defined and resultado_tarea_1.rc != 0 else 1 }},
+            '{{ resultado_tarea_1 | to_json | replace("'", "''") }}',
+            'Comprueba si tu CPU soporta virtualización VT-x/AMD-V y que los paquetes estén disponibles.',
+            NOW(),
+            NOW()
+          );
+
+    - name: Tarea 2.1 - Añadir usuario alumno al grupo libvirt
+      user:
+        name: alumno
+        groups: libvirt
+        append: yes
+
+    - name: Tarea 2.2 - Registrar configuración permisos libvirt en BBDD
+      delegate_to: localhost
+      become: false
+      community.mysql.mysql_query:
+        login_db: "{{ db_name }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_host: "{{ db_host }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_2 }}',
+            1,
+            'Usuario alumno añadido a grupo libvirt',
+            'Si virt-manager no se abre sin sudo, asegúrate de cerrar sesión o reiniciar.',
+            NOW(),
+            NOW()
+          );
+
+    - name: Tarea 3.1 - Crear carpeta de accesos directos si no existe
+      file:
+        path: /home/alumno/.local/share/applications
+        state: directory
+        owner: alumno
+        group: alumno
+        mode: '0755'
+
+    - name: Tarea 3.2 - Crear acceso directo a Virt-Manager
+      copy:
+        dest: /home/alumno/.local/share/applications/virt-manager.desktop
+        content: |
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=Virtual Machine Manager
+          Exec=virt-manager
+          Icon=virt-manager
+          Terminal=false
+          Categories=System;Emulator;Virtualization;
+        owner: alumno
+        group: alumno
+        mode: '0755'
+

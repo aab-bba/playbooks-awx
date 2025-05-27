@@ -1,0 +1,152 @@
+- name: Instalar Android Studio
+  hosts: pendientes
+  gather_facts: no
+  become: true
+
+  vars:
+    playbook_nombre: "FU05 - instalar_android_studio"
+    tarea_1: "Tarea 1 - Descargar Android Studio"
+    tarea_2: "Tarea 2 - Instalar dependencias"
+    tarea_3: "Tarea 3 - Instalar Android Studio"
+
+  tasks:
+    - name: Tarea 0 - Generar timestamp único para esta ejecución
+      set_fact:
+        playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+      run_once: true
+
+# ---------- TAREA 1: Descargar ----------
+    - name: Tarea 1.1 - Descargar Android Studio
+      get_url:
+        url: "{{ android_studio_url }}"
+        dest: /tmp/android-studio.tar.gz
+      register: resultado_descarga_android
+      ignore_errors: true
+
+    - name: Tarea 1.2 - Registrar descarga en BBDD
+      delegate_to: localhost
+      become: false
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_1 }}',
+            {{ 0 if resultado_descarga_android.rc is defined and resultado_descarga_android.rc != 0 else 1 }},
+            '{{ resultado_descarga_android | to_json | replace("'", "''") }}',
+            'Verifica URL oficial o conexión a internet.',
+            NOW(),
+            NOW()
+          );
+
+# ---------- TAREA 2: Dependencias ----------
+    - name: Tarea 2.1 - Instalar dependencias necesarias para Android Studio
+      apt:
+        name:
+          - libc6:i386
+          - libncurses6:i386
+          - libstdc++6:i386
+          - lib32z1
+          - libbz2-1.0:i386
+        state: present
+        update_cache: yes
+      register: resultado_dependencias_android
+      ignore_errors: true
+
+    - name: Tarea 2.2 - Registrar instalación de dependencias en BBDD
+      delegate_to: localhost
+      become: false
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_2 }}',
+            {{ 0 if resultado_dependencias_android.rc is defined and resultado_dependencias_android.rc != 0 else 1 }},
+            '{{ resultado_dependencias_android | to_json | replace("'", "''") }}',
+            'Verifica disponibilidad de repositorios multiarquitectura.',
+            NOW(),
+            NOW()
+          );
+
+# ---------- TAREA 3: Instalación ----------
+    - name: Tarea 3.1 - Extraer Android Studio
+      unarchive:
+        src: /tmp/android-studio.tar.gz
+        dest: /opt/
+        remote_src: yes
+      when: resultado_descarga_android is succeeded
+
+    - name: Tarea 3.2 - Crear enlace simbólico
+      file:
+        src: /opt/android-studio/bin/studio.sh
+        dest: /usr/local/bin/android-studio
+        state: link
+
+    - name: Tarea 3.3 - Eliminar archivo descargado
+      file:
+        path: /tmp/android-studio.tar.gz
+        state: absent
+      when: resultado_descarga_android is succeeded
+
+    - name: Tarea 3.4 - Registrar instalación Android Studio en BBDD
+      delegate_to: localhost
+      become: false
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_3 }}',
+            {{ 0 if resultado_descarga_android.rc is defined and resultado_descarga_android.rc != 0 else 1 }},
+            '{{ resultado_descarga_android | to_json | replace("'", "''") }}',
+            'Verifica permisos en /opt o integridad del archivo descargado.',
+            NOW(),
+            NOW()
+          );
+
+# ---------- ACCESOS DIRECTOS ----------
+    - name: Tarea 4.1 - Crear carpeta de accesos directos si no existe
+      file:
+        path: /home/alumno/.local/share/applications
+        state: directory
+        owner: alumno
+        group: alumno
+        mode: '0755'
+
+    - name: Tarea 4.2 - Crear acceso directo a Android Studio
+      copy:
+        dest: /home/alumno/.local/share/applications/android-studio.desktop
+        content: |
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=Android Studio
+          Exec=/usr/local/bin/android-studio
+          Icon=/opt/android-studio/bin/studio.png
+          Terminal=false
+          Categories=Development;IDE;
+        owner: alumno
+        group: alumno
+        mode: '0755'
