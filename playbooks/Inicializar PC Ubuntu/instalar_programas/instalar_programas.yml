@@ -16,26 +16,51 @@
         playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
       run_once: true
 
-# ---------- VISUAL STUDIO CODE ----------
+
     - name: Tarea 1.1 - Importar clave y añadir repo VSCode
       block:
-        - name: Importar clave GPG
-          shell: rpm --import https://packages.microsoft.com/keys/microsoft.asc
-          args:
-            warn: false
 
-        - name: Añadir repositorio VSCode
-          copy:
-            dest: /etc/yum.repos.d/vscode.repo
-            content: |
-              [code]
-              name=Visual Studio Code
-              baseurl=https://packages.microsoft.com/yumrepos/vscode
-              enabled=1
-              gpgcheck=1
-              gpgkey=https://packages.microsoft.com/keys/microsoft.asc
-      register: resultado_tarea_1
-      ignore_errors: true
+        - name: Importar clave GPG de Microsoft para VSCode
+          ansible.builtin.apt_key:
+            url: https://packages.microsoft.com/keys/microsoft.asc
+            state: present
+          register: resultado_importar_clave
+
+        - name: Añadir repositorio de Visual Studio Code
+          ansible.builtin.apt_repository:
+            repo: "deb [arch=amd64] https://packages.microsoft.com/repos/code stable main"
+            filename: 'vscode'
+            state: present
+          register: resultado_añadir_repo
+
+      rescue:
+        - name: Mensaje de ayuda si falla la configuración del repositorio de VSCode
+          debug:
+            msg: "❌ No se pudo añadir el repositorio de Visual Studio Code. Revisa la conexión o la URL del repositorio."
+
+      always:
+        - name: Tarea 1.2 - Registrar resultado de la configuración del repositorio en BBDD
+          delegate_to: localhost
+          community.mysql.mysql_query:
+            login_db: "{{ bbdd_name }}"
+            login_user: "{{ bbdd_user }}"
+            login_password: "{{ bbdd_password }}"
+            login_host: "{{ bbdd_host }}"
+            query: |
+              INSERT INTO tasks (
+                host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+              ) VALUES (
+                {{ host_id }},
+                'instalar_programas',
+                '{{ timestamp_unico }}',
+                'Tarea 1.1 - Configurar repositorio VSCode',
+                {{ (resultado_añadir_repo is defined and resultado_añadir_repo.failed | default(false) == false) | int }},
+                '{{ resultado_añadir_repo.msg | default("OK") }}',
+                '{% if resultado_añadir_repo is not defined or resultado_añadir_repo.failed | default(false) %}Error al añadir el repositorio de VSCode. Verifica la clave o la URL.{% else %}OK{% endif %}',
+                now(),
+                now()
+              )
+
 
     - name: Tarea 1.2 - Instalar VSCode
       dnf:
