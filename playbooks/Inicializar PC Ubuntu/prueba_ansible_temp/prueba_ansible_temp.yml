@@ -1,0 +1,14 @@
+- name: Verificar conexión con ansible_temp
+  hosts: pendientes
+  gather_facts: no
+  become: false
+
+  vars:
+    ansible_user: ansible_temp
+
+  tasks:
+    - name: Mostrar usuario conectado
+      command: whoami
+      register: resultado
+    - debug:
+        var: resultado.stdout
