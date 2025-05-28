@@ -14,21 +14,46 @@
         playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
       run_once: true
 
-    - name: Tarea 1.1 - Descargar paquete .deb de Docker Desktop
+    - name: Tarea 1 - Instalar Docker Engine (CE) y CLI requeridos por Docker Desktop
+      block:
+
+        - name: Tarea 1.1 - Añadir clave GPG oficial de Docker
+          ansible.builtin.apt_key:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            state: present
+
+        - name: Tarea 1.2 - Añadir repositorio oficial de Docker
+          ansible.builtin.apt_repository:
+            repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+            state: present
+            filename: docker
+
+        - name: Tarea 1.3 - Instalar docker-ce y docker-ce-cli
+          ansible.builtin.apt:
+            name:
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+            state: present
+            update_cache: yes
+      when: ansible_os_family == "Debian"
+
+
+    - name: Tarea 1.4 - Descargar paquete .deb de Docker Desktop
       get_url:
         url: "{{ url_docker }}"
         dest: /tmp/docker-desktop.deb
       register: resultado_descarga
       ignore_errors: true
 
-    - name: Tarea 1.2 - Instalar Docker Desktop desde .deb
+    - name: Tarea 1.5 - Instalar Docker Desktop desde .deb
       apt:
         deb: /tmp/docker-desktop.deb
       register: resultado_instalacion
       ignore_errors: true
       when: resultado_descarga is succeeded
 
-    - name: Tarea 1.3 - Registrar instalación Docker Desktop en BBDD
+    - name: Tarea 1.6 - Registrar instalación Docker Desktop en BBDD
       delegate_to: localhost
       become: false
       community.mysql.mysql_query:
