@@ -105,41 +105,22 @@
             NOW(), NOW()
           );
 
-    - name: Tarea 3.1 - Crear configuración personalizada dconf para energía
-      become: true
-      become_user: alumno
+    - name: Tarea 3.1 - Crear configuración global de energía para todos los usuarios
       copy:
-        dest: /home/alumno/.config/dconf/user
-        content: ''
-        mode: '0600'
-
-    - name: Tarea 3.2 - Escribir configuración de energía en dconf
-      become: true
-      become_user: alumno
-      shell: |
-        mkdir -p /home/alumno/.config
-        echo "
-        [org/gnome/settings-daemon/plugins/power]
-        sleep-inactive-ac-type='nothing'
-        sleep-inactive-ac-timeout=0
-        sleep-inactive-battery-type='nothing'
-        sleep-inactive-battery-timeout=0
-        " | dconf load /org/gnome/settings-daemon/plugins/power/
-      environment:
-        HOME: "/home/alumno"
+        dest: /etc/dconf/db/local.d/00-power
+        content: |
+          [org/gnome/settings-daemon/plugins/power]
+          sleep-inactive-ac-type='nothing'
+          sleep-inactive-ac-timeout=0
+          sleep-inactive-battery-type='nothing'
+          sleep-inactive-battery-timeout=0
+        owner: root
+        group: root
+        mode: '0644'
       register: resultado_configuracion_energia
-      ignore_errors: true
+      notify: Actualizar dconf
 
-    - name: Tarea 3.3 - Asegurar permisos de config dconf
-      become: true
-      file:
-        path: /home/alumno/.config
-        state: directory
-        owner: alumno
-        group: alumno
-        recurse: yes
-
-    - name: Tarea 3.4 - Registrar configuración global de energía en BBDD
+    - name: Tarea 3.2 - Registrar configuración global de energía en BBDD
       delegate_to: localhost
       become: false
       community.mysql.mysql_query:
@@ -161,6 +142,8 @@
             NOW(),
             NOW()
           );
+
+
 
     - name: Tarea 4.1 - Modificar acceso directo de Firefox para abrir en incógnito
       become: true
@@ -230,3 +213,6 @@
             'Configurado en .bash_logout',
             NOW(), NOW()
           );
+  handlers:
+    - name: Actualizar dconf
+      command: dconf update
