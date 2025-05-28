@@ -143,20 +143,20 @@
             NOW()
           );
 
-        - name: Tarea 4.1 - Modificar acceso directo de Firefox para abrir en incógnito
-          become: true
-          copy:
-            dest: /var/lib/snapd/desktop/applications/firefox_firefox.desktop
-            content: |
-              [Desktop Entry]
-              Name=Firefox (Incógnito)
-              Exec=firefox --private-window %u
-              Icon=firefox
-              Type=Application
-              Categories=Network;WebBrowser;
-            owner: root
-            group: root
-            mode: '0644'
+    - name: Tarea 4.1 - Modificar acceso directo de Firefox para abrir en incógnito
+      become: true
+      copy:
+        dest: /var/lib/snapd/desktop/applications/firefox_firefox.desktop
+        content: |
+          [Desktop Entry]
+          Name=Firefox (Incógnito)
+          Exec=firefox --private-window %u
+          Icon=firefox
+          Type=Application
+          Categories=Network;WebBrowser;
+        owner: root
+        group: root
+        mode: '0644'
 
 
     - name: Tarea 4.2 - Registrar configuración Firefox en BBDD
