@@ -105,21 +105,17 @@
             NOW(), NOW()
           );
 
-    - name: Tarea 3.1 - Desactivar apagado de pantalla para alumno
+    - name: Tarea 3.1 - Configurar energía (pantalla nunca se apaga)
       become: true
       become_user: alumno
       shell: |
-        export DISPLAY=:0
-        export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
-        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
-        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 0
-        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'nothing'
-        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-timeout 0
+        dbus-launch gsettings set org.gnome.desktop.session idle-delay 0
+        dbus-launch gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 0
+        dbus-launch gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
       environment:
-        XDG_RUNTIME_DIR: "/run/user/1000"
-      register: resultado_energia
+        DISPLAY: ":0"
       ignore_errors: true
-
+      register: resultado_configuracion_energia
 
     - name: Tarea 3.2 - Registrar configuración de energía en BBDD
       delegate_to: localhost
@@ -143,11 +139,21 @@
             NOW(), NOW()
           );
 
-    - name: Tarea 4.1 - Modificar acceso directo de Firefox
-      lineinfile:
-        path: /usr/share/applications/firefox.desktop
-        regexp: '^Exec='
-        line: 'Exec=firefox --private-window'
+    - name: Tarea 4.1 - Modificar acceso directo de Firefox para abrir en incógnito
+      become: true
+      copy:
+        dest: /var/lib/snapd/desktop/applications/firefox_firefox.desktop
+        content: |
+          [Desktop Entry]
+          Name=Firefox (Incógnito)
+          Exec=firefox --private-window %u
+          Icon=firefox
+          Type=Application
+          Categories=Network;WebBrowser;
+        owner: root
+        group: root
+        mode: '0644'
+
 
     - name: Tarea 4.2 - Registrar configuración Firefox en BBDD
       delegate_to: localhost
