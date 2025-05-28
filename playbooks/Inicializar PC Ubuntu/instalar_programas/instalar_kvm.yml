@@ -45,7 +45,7 @@
             '{{ playbook_id }}',
             '{{ tarea_1 }}',
             {{ 0 if resultado_tarea_1.rc is defined and resultado_tarea_1.rc != 0 else 1 }},
-            '{{ resultado_tarea_1.stdout_lines | join(" ") | truncate(1000, True) | replace("'", "''") }}',
+            '{{ resultado_tarea_1.stdout_lines | default(["No necesita instalar nada"]) | join(" ") | truncate(1000, True) | replace("'", "''") }}',
             'Comprueba si tu CPU soporta virtualización VT-x/AMD-V y que los paquetes estén disponibles.',
             NOW(),
             NOW()
