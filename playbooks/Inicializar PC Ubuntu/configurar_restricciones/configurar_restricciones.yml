@@ -12,10 +12,19 @@
     tarea_5: "Tarea 5 - Borrar historial de terminal al cerrar sesión"
 
   tasks:
-    - name: Tarea 0 - Generar timestamp único para esta ejecución
+    - name: Tarea 0.1 - Generar timestamp único para esta ejecución
       set_fact:
         playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
       run_once: true
+
+    - name: Tarea 0.2 - Crear carpeta tmp para Ansible del usuario alumno
+      file:
+        path: /home/alumno/.ansible/tmp
+        state: directory
+        owner: alumno
+        group: alumno
+        mode: '0700'
+
     
     - name: Tarea 1.1 - Crear política para restringir modificación y desactivación de red
       copy:
@@ -27,7 +36,8 @@
                   action.id == "org.freedesktop.NetworkManager.settings.modify.own" ||
                   action.id == "org.freedesktop.NetworkManager.enable-disable-network" ||
                   action.id == "org.freedesktop.NetworkManager.enable-disable-wifi" ||
-                  action.id == "org.freedesktop.NetworkManager.enable-disable-wwan"
+                  action.id == "org.freedesktop.NetworkManager.enable-disable-wwan" ||
+                  action.id == "org.freedesktop.NetworkManager.network-control"
                 )) {
               return polkit.Result.NO;
             }
@@ -35,7 +45,6 @@
         owner: root
         group: root
         mode: '0644'
-
 
     - name: Tarea 1.2 - Registrar en BBDD
       delegate_to: localhost
