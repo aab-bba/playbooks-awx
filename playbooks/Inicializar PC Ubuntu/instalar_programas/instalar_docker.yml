@@ -7,7 +7,6 @@
     playbook_nombre: "FU05.4 - instalar_docker_desktop"
     tarea_1: "Tarea 1 - Descargar e instalar Docker Desktop"
     tarea_2: "Tarea 2 - Crear acceso directo para Docker Desktop"
-    url_docker: "https://desktop.docker.com/linux/main/amd64/docker-desktop-4.30.0-amd64.deb"
 
   tasks:
     - name: Tarea 0 - Generar timestamp único para esta ejecución
