@@ -86,16 +86,8 @@
 
     - name: Tarea 2.2 - Crear acceso directo a Docker Desktop
       copy:
+        src: /usr/share/applications/docker-desktop.desktop
         dest: /home/alumno/.local/share/applications/docker-desktop.desktop
-        content: |
-          [Desktop Entry]
-          Version=1.0
-          Type=Application
-          Name=Docker Desktop
-          Exec=/usr/bin/docker-desktop
-          Icon=docker-desktop
-          Terminal=false
-          Categories=Development;Container;Virtualization;
         owner: alumno
         group: alumno
         mode: '0755'
