@@ -105,19 +105,22 @@
             NOW(), NOW()
           );
 
-    - name: Tarea 3.1 - Configurar energía (pantalla nunca se apaga)
-      become: true
-      become_user: alumno
-      shell: |
-        dbus-launch gsettings set org.gnome.desktop.session idle-delay 0
-        dbus-launch gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 0
-        dbus-launch gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
-      environment:
-        DISPLAY: ":0"
-      ignore_errors: true
+    - name: Tarea 3.1 - Crear configuración global de energía para todos los usuarios
+      copy:
+        dest: /etc/dconf/db/local.d/00-power
+        content: |
+          [org/gnome/settings-daemon/plugins/power]
+          sleep-inactive-ac-type='nothing'
+          sleep-inactive-ac-timeout=0
+          sleep-inactive-battery-type='nothing'
+          sleep-inactive-battery-timeout=0
+        owner: root
+        group: root
+        mode: '0644'
       register: resultado_configuracion_energia
+      notify: Actualizar dconf
 
-    - name: Tarea 3.2 - Registrar configuración de energía en BBDD
+    - name: Tarea 3.2 - Registrar configuración global de energía en BBDD
       delegate_to: localhost
       become: false
       community.mysql.mysql_query:
@@ -132,27 +135,28 @@
             {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
             '{{ playbook_nombre }}',
             '{{ playbook_id }}',
-            '{{ tarea_3 }}',
-            1,
-            'Modo rendimiento y sin suspensión de pantalla',
-            'Aplicado con gsettings y powerprofilesctl',
-            NOW(), NOW()
+            'Tarea 3 - Configurar energía global con dconf',
+            {{ 0 if resultado_configuracion_energia.failed | default(false) else 1 }},
+            '{{ resultado_configuracion_energia.msg | default("OK") }}',
+            'Verifica que dconf esté instalado correctamente y el esquema GNOME exista.',
+            NOW(),
+            NOW()
           );
 
-    - name: Tarea 4.1 - Modificar acceso directo de Firefox para abrir en incógnito
-      become: true
-      copy:
-        dest: /var/lib/snapd/desktop/applications/firefox_firefox.desktop
-        content: |
-          [Desktop Entry]
-          Name=Firefox (Incógnito)
-          Exec=firefox --private-window %u
-          Icon=firefox
-          Type=Application
-          Categories=Network;WebBrowser;
-        owner: root
-        group: root
-        mode: '0644'
+        - name: Tarea 4.1 - Modificar acceso directo de Firefox para abrir en incógnito
+          become: true
+          copy:
+            dest: /var/lib/snapd/desktop/applications/firefox_firefox.desktop
+            content: |
+              [Desktop Entry]
+              Name=Firefox (Incógnito)
+              Exec=firefox --private-window %u
+              Icon=firefox
+              Type=Application
+              Categories=Network;WebBrowser;
+            owner: root
+            group: root
+            mode: '0644'
 
 
     - name: Tarea 4.2 - Registrar configuración Firefox en BBDD
