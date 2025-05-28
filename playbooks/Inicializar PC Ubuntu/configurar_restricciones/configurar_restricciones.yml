@@ -16,17 +16,20 @@
       set_fact:
         playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
       run_once: true
-
+    
     - name: Tarea 1.1 - Crear política para restringir modificación de red
       copy:
-        dest: /etc/polkit-1/localauthority/50-local.d/10-network-manager.pkla
+        dest: /etc/polkit-1/localauthority/50-local.d/10-network.pkla
         content: |
-          [Restringir modificación de red para alumno]
+          [Restrict Network Settings]
           Identity=unix-user:alumno
           Action=org.freedesktop.NetworkManager.settings.modify.system
           ResultAny=no
           ResultInactive=no
           ResultActive=no
+        owner: root
+        group: root
+        mode: '0644'
 
     - name: Tarea 1.2 - Registrar en BBDD
       delegate_to: localhost
