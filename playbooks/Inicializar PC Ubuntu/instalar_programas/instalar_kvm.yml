@@ -7,7 +7,8 @@
     playbook_nombre: "FU05.3 - instalar_kvm_qemu"
     tarea_1: "Tarea 1 - Instalar KVM y Virt-Manager"
     tarea_2: "Tarea 2 - Configurar permisos libvirt"
-    tarea_3: "Tarea 3 - Acceso directo a Virt-Manager"
+    tarea_3: "Tarea 3 - Configurar libvirt y grupos"
+    tarea_4: "Tarea 4 - Acceso directo a Virt-Manager"
 
   tasks:
     - name: Tarea 0 - Generar timestamp único para esta ejecución
@@ -80,7 +81,57 @@
             NOW()
           );
 
-    - name: Tarea 3.1 - Crear carpeta de accesos directos si no existe
+      vars:
+
+    - name: Tarea 3.1 - Habilitar e iniciar libvirtd
+      ansible.builtin.systemd:
+        name: libvirtd
+        state: started
+        enabled: true
+      register: resultado_libvirtd
+      ignore_errors: true
+
+    - name: Tarea 3.2 - Añadir usuario alumno a grupos libvirt y kvm
+      ansible.builtin.user:
+        name: alumno
+        groups: libvirt,kvm
+        append: yes
+      register: resultado_grupos
+      ignore_errors: true
+
+    - name: Tarea 3.3 - Registrar configuración libvirt y grupos en BBDD
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_3 }}',
+            {{
+              (
+                (resultado_libvirtd.rc is not defined or resultado_libvirtd.rc == 0)
+                and (resultado_grupos.rc is not defined or resultado_grupos.rc == 0)
+              ) | int
+            }},
+            '{{ {
+              "libvirtd": resultado_libvirtd | default({}),
+              "grupos": resultado_grupos | default({})
+            } | to_json | replace("'", "''") }}',
+            'Verifica que el servicio libvirtd esté activo y que el usuario esté en los grupos adecuados.',
+            NOW(),
+            NOW()
+          );
+      delegate_to: localhost
+      become: false
+
+
+    - name: Tarea 4.1 - Crear carpeta de accesos directos si no existe
       file:
         path: /home/alumno/.local/share/applications
         state: directory
@@ -88,7 +139,7 @@
         group: alumno
         mode: '0755'
 
-    - name: Tarea 3.2 - Crear acceso directo a Virt-Manager
+    - name: Tarea 4.2 - Crear acceso directo a Virt-Manager
       copy:
         dest: /home/alumno/.local/share/applications/virt-manager.desktop
         content: |
