@@ -1,0 +1,100 @@
+- name: Instalar Docker Desktop en Ubuntu
+  hosts: pendientes
+  gather_facts: true
+  become: true
+
+  vars:
+    playbook_nombre: "FU05.4 - instalar_docker_desktop"
+    tarea_1: "Tarea 1 - Descargar e instalar Docker Desktop"
+    tarea_2: "Tarea 2 - Crear acceso directo para Docker Desktop"
+    url_docker: "https://desktop.docker.com/linux/main/amd64/docker-desktop-4.30.0-amd64.deb"
+
+  tasks:
+    - name: Tarea 0 - Generar timestamp único para esta ejecución
+      set_fact:
+        playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+      run_once: true
+
+    - name: Tarea 1.1 - Descargar paquete .deb de Docker Desktop
+      get_url:
+        url: "{{ url_docker }}"
+        dest: /tmp/docker-desktop.deb
+      register: resultado_descarga
+      ignore_errors: true
+
+    - name: Tarea 1.2 - Instalar Docker Desktop desde .deb
+      apt:
+        deb: /tmp/docker-desktop.deb
+      register: resultado_instalacion
+      ignore_errors: true
+      when: resultado_descarga is succeeded
+
+    - name: Tarea 1.3 - Registrar instalación Docker Desktop en BBDD
+      delegate_to: localhost
+      become: false
+      community.mysql.mysql_query:
+        login_db: "{{ db_name }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_host: "{{ db_host }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_1 }}',
+            {{ 0 if resultado_instalacion.rc is defined and resultado_instalacion.rc != 0 else 1 }},
+            '{{ resultado_instalacion | to_json | replace("'", "''") }}',
+            'Asegúrate de que la versión de Ubuntu es compatible, y que Docker Desktop tiene permisos para ejecutarse.',
+            NOW(),
+            NOW()
+          );
+
+    - name: Tarea 2.1 - Crear carpeta de accesos directos si no existe
+      file:
+        path: /home/alumno/.local/share/applications
+        state: directory
+        owner: alumno
+        group: alumno
+        mode: '0755'
+
+    - name: Tarea 2.2 - Crear acceso directo a Docker Desktop
+      copy:
+        dest: /home/alumno/.local/share/applications/docker-desktop.desktop
+        content: |
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=Docker Desktop
+          Exec=/usr/bin/docker-desktop
+          Icon=docker-desktop
+          Terminal=false
+          Categories=Development;Container;Virtualization;
+        owner: alumno
+        group: alumno
+        mode: '0755'
+
+    - name: Tarea 2.3 - Registrar acceso directo en BBDD
+      delegate_to: localhost
+      become: false
+      community.mysql.mysql_query:
+        login_db: "{{ db_name }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_host: "{{ db_host }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_2 }}',
+            1,
+            'Acceso directo creado para Docker Desktop en /home/alumno/.local/share/applications/docker-desktop.desktop',
+            '',
+            NOW(),
+            NOW()
+          );
