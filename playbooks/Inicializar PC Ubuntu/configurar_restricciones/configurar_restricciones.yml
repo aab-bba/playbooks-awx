@@ -105,6 +105,14 @@
             NOW(), NOW()
           );
 
+    - name: Tarea 3.0 - Crear directorio de configuración dconf si no existe
+      file:
+        path: /etc/dconf/db/local.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
     - name: Tarea 3.1 - Crear configuración global de energía para todos los usuarios
       copy:
         dest: /etc/dconf/db/local.d/00-power
