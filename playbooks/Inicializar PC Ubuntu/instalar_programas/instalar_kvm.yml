@@ -4,7 +4,7 @@
   become: true
 
   vars:
-    playbook_nombre: "FU06 - instalar_kvm_qemu"
+    playbook_nombre: "FU05.3 - instalar_kvm_qemu"
     tarea_1: "Tarea 1 - Instalar KVM y Virt-Manager"
     tarea_2: "Tarea 2 - Configurar permisos libvirt"
     tarea_3: "Tarea 3 - Acceso directo a Virt-Manager"

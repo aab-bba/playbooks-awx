@@ -4,7 +4,7 @@
   become: true
 
   vars:
-    playbook_nombre: "FU05 - instalar_vscode"
+    playbook_nombre: "FU05.1 - instalar_vscode"
     tarea_1: "Tarea 1 - Añadir repos Visual Studio Code"
     tarea_2: "Tarea 2 - Instalar VS Code"
 

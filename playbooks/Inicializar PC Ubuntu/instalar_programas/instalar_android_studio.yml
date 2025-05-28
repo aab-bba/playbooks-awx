@@ -4,7 +4,7 @@
   become: true
 
   vars:
-    playbook_nombre: "FU05 - instalar_android_studio"
+    playbook_nombre: "FU05.2 - instalar_android_studio"
     tarea_1: "Tarea 1 - Descargar Android Studio"
     tarea_2: "Tarea 2 - Instalar dependencias"
     tarea_3: "Tarea 3 - Instalar Android Studio"
