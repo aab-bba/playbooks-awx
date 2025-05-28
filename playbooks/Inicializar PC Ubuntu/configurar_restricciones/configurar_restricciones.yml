@@ -17,19 +17,20 @@
         playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
       run_once: true
     
-    - name: Tarea 1.1 - Crear política para restringir modificación de red
+    - name: Tarea 1.1 - Crear política para restringir modificación de red (método moderno)
       copy:
-        dest: /etc/polkit-1/localauthority/50-local.d/10-network.pkla
+        dest: /etc/polkit-1/rules.d/10-network-restriction.rules
         content: |
-          [Restrict Network Settings]
-          Identity=unix-user:alumno
-          Action=org.freedesktop.NetworkManager.settings.modify.system
-          ResultAny=no
-          ResultInactive=no
-          ResultActive=no
+          polkit.addRule(function(action, subject) {
+            if (subject.isInGroup("alumno") &&
+                action.id == "org.freedesktop.NetworkManager.settings.modify.system") {
+              return polkit.Result.NO;
+            }
+          });
         owner: root
         group: root
         mode: '0644'
+
 
     - name: Tarea 1.2 - Registrar en BBDD
       delegate_to: localhost
