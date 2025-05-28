@@ -83,19 +83,23 @@
             NOW(), NOW()
           );
 
-    - name: Tarea 3.1 - Configurar política de energía
-      gsettings:
-        schema: org.gnome.settings-daemon.plugins.power
-        key: sleep-inactive-ac-timeout
-        value: 0
-        user: alumno
-
-    - name: Tarea 3.2 - Establecer modo de energía en rendimiento
-      command: powerprofilesctl set performance
+    - name: Tarea 3.1 - Desactivar apagado de pantalla para alumno
+      become: true
       become_user: alumno
+      shell: |
+        export DISPLAY=:0
+        export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
+        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 0
+        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'nothing'
+        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-timeout 0
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/1000"
+      register: resultado_energia
       ignore_errors: true
 
-    - name: Tarea 3.3 - Registrar configuración de energía en BBDD
+
+    - name: Tarea 3.2 - Registrar configuración de energía en BBDD
       delegate_to: localhost
       become: false
       community.mysql.mysql_query:
