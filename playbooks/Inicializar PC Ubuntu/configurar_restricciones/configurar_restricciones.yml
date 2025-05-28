@@ -17,19 +17,25 @@
         playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
       run_once: true
     
-    - name: Tarea 1.1 - Crear política para restringir modificación de red (método moderno)
+    - name: Tarea 1.1 - Crear política para restringir modificación y desactivación de red
       copy:
-        dest: /etc/polkit-1/rules.d/10-network-restriction.rules
+        dest: /etc/polkit-1/rules.d/10-network-restrictions.rules
         content: |
           polkit.addRule(function(action, subject) {
-            if (subject.isInGroup("alumno") &&
-                action.id == "org.freedesktop.NetworkManager.settings.modify.system") {
+            if (subject.user == "alumno" &&
+                (
+                  action.id == "org.freedesktop.NetworkManager.settings.modify.own" ||
+                  action.id == "org.freedesktop.NetworkManager.enable-disable-network" ||
+                  action.id == "org.freedesktop.NetworkManager.enable-disable-wifi" ||
+                  action.id == "org.freedesktop.NetworkManager.enable-disable-wwan"
+                )) {
               return polkit.Result.NO;
             }
           });
         owner: root
         group: root
         mode: '0644'
+
 
 
     - name: Tarea 1.2 - Registrar en BBDD
@@ -56,14 +62,18 @@
 
     - name: Tarea 2.1 - Impedir cambio de nombre del equipo
       copy:
-        dest: /etc/polkit-1/localauthority/50-local.d/10-hostname.pkla
+        dest: /etc/polkit-1/rules.d/10-hostname-restriction.rules
         content: |
-          [Impedir cambio de nombre de equipo por alumno]
-          Identity=unix-user:alumno
-          Action=org.freedesktop.hostname1.set-hostname
-          ResultAny=no
-          ResultInactive=no
-          ResultActive=no
+          polkit.addRule(function(action, subject) {
+            if (subject.isInGroup("alumno") &&
+                action.id == "org.freedesktop.hostname1.set-hostname") {
+              return polkit.Result.NO;
+            }
+          });
+        owner: root
+        group: root
+        mode: '0644'
+
 
     - name: Tarea 2.2 - Registrar en BBDD
       delegate_to: localhost
