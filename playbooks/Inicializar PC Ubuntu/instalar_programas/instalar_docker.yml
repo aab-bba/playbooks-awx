@@ -85,9 +85,10 @@
         mode: '0755'
 
     - name: Tarea 2.2 - Crear acceso directo a Docker Desktop
-      copy:
+      ansible.builtin.copy:
         src: /usr/share/applications/docker-desktop.desktop
         dest: /home/alumno/.local/share/applications/docker-desktop.desktop
+        remote_src: yes
         owner: alumno
         group: alumno
         mode: '0755'
