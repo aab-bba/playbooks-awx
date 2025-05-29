@@ -13,8 +13,8 @@
         '{{ playbook_id }}',
         '{{ task_name }}',
         {{ task_success | default(0) }},
-        '{{ task_message | default("")[:1000] | replace("'", "''") }}',
-        '{{ help_message | default("")[:1000] | replace("'", "''") }}',
+        '{{ (task_message | default(""))[:1000] | replace("'", "''") }}'
+        '{{ (help_message | default(""))[:1000] | replace("'", "''") }}'
         NOW(),
         NOW()
       );
