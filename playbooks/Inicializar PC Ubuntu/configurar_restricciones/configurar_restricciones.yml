@@ -171,9 +171,16 @@
         path: /home/alumno/.bashrc
         line: "export HISTFILE=/dev/null"
         create: yes
-      owner: alumno
-      group: alumno
-      mode: '0644'
+      become: true
+      become_user: alumno
+
+    - name: Tarea 4.1.1 - Asegurar permisos correctos de .bashrc
+      file:
+        path: /home/alumno/.bashrc
+        owner: alumno
+        group: alumno
+        mode: '0644'
+        
     
     - name: Tarea 4.2 - Limpiar historial actual
       copy:
