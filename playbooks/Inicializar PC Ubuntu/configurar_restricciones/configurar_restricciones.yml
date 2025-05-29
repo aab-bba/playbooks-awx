@@ -165,8 +165,7 @@
             NOW(),
             NOW()
           );
-    
-    # ---------------- HISTORIAL TERMINAL ----------------
+
     - name: Tarea 4.1 - Desactivar guardado de historial en .bashrc
       lineinfile:
         path: /home/alumno/.bashrc
