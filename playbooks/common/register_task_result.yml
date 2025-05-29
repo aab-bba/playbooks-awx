@@ -1,0 +1,22 @@
+- name: Registrar resultado de tarea en BBDD
+  community.mysql.mysql_query:
+    login_host: "{{ db_host }}"
+    login_user: "{{ db_user }}"
+    login_password: "{{ db_password }}"
+    login_db: "{{ db_name }}"
+    query: >
+      INSERT INTO {{ db_table }} (
+        host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+      ) VALUES (
+        {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+        '{{ playbook_nombre }}',
+        '{{ playbook_id }}',
+        '{{ task_name }}',
+        {{ task_success | default(0) }},
+        '{{ task_message | default("")[:1000] | replace("'", "''") }}',
+        '{{ help_message | default("")[:1000] | replace("'", "''") }}',
+        NOW(),
+        NOW()
+      );
+  delegate_to: localhost
+  become: false

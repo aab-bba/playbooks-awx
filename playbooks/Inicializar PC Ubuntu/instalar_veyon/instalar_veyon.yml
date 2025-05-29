@@ -10,10 +10,35 @@
     veyon_key_filename: "/tmp/veyon_public_key.pem"
 
   tasks:
-    - name: Tarea 0 - Generar timestamp único para esta ejecución
+    - name: Tarea 0.1 - Generar timestamp único para esta ejecución
       set_fact:
         playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
       run_once: true
+
+    - name: Tarea 0.2 - Desbloquear apt y forzar configuración previa
+      block:
+        - name: Eliminar locks de apt
+          file:
+            path: "{{ item }}"
+            state: absent
+          loop:
+            - /var/lib/apt/lists/lock
+            - /var/cache/apt/archives/lock
+            - /var/lib/dpkg/lock
+            - /var/lib/dpkg/lock-frontend
+
+        - name: Reparar estado de dpkg si es necesario
+          ansible.builtin.command: dpkg --configure -a
+
+        - name: Forzar actualización del caché de paquetes
+          apt:
+            update_cache: yes
+            cache_valid_time: 0
+          retries: 3
+          delay: 5
+          register: resultado_apt_update
+          until: resultado_apt_update is succeeded
+
 
     # 1. Descargar e instalar Veyon
     - name: Tarea 1.1 - Descargar paquete .deb de Veyon
@@ -22,20 +47,22 @@
         dest: /tmp/veyon.deb
         mode: '0644'
 
-    - name: Actualizar índice de paquetes
-      apt:
-        update_cache: yes
-
     - name: Tarea 1.2 - Instalar Veyon
       apt:
         deb: /tmp/veyon.deb
       register: resultado_tarea_1
       ignore_errors: true
 
+    - name: Tarea 1.3 - Registrar instalación Veyon en BBDD
+      include_tasks: registrar_en_bbdd.yml
+      vars:
+        resultado_tarea: "{{ resultado_tarea_1 }}"
+        tarea_nombre: "{{ tarea_1 }}"
+
     # 2. Configurar Veyon (clave y ocultar icono)
     - name: Tarea 2.1 - Copiar clave pública desde repositorio
       copy:
-        src: files/public_key.pem
+        src: ../files/public_key.pem
         dest: "{{ veyon_key_filename }}"
         mode: '0644'
 
@@ -51,6 +78,11 @@
       register: resultado_tarea_2b
       ignore_errors: true
 
+    - name: Tarea 2.4 - Registrar configuración en BBDD
+      include_tasks: registrar_en_bbdd.yml
+      vars:
+        resultado_tarea: "{{ resultado_tarea_2b }}"
+        tarea_nombre: "{{ tarea_2 }}"
 
     # 3. Abrir puertos de red
     - name: Tarea 3.1 - Abrir puertos firewall para Veyon
@@ -77,26 +109,15 @@
       register: resultado_tarea_4
       ignore_errors: true
 
+    - name: Tarea 4.2 - Registrar arranque del servicio en BBDD
+      include_tasks: registrar_en_bbdd.yml
+      vars:
+        resultado_tarea: "{{ resultado_tarea_4 }}"
+        tarea_nombre: "{{ tarea_4 }}"
 
-    - name: Tarea 5 - Registrar resultado en BBDD
-      community.mysql.mysql_query:
-        login_host: "{{ db_host }}"
-        login_user: "{{ db_user }}"
-        login_password: "{{ db_password }}"
-        login_db: "{{ db_name }}"
-        query: >
-          INSERT INTO {{ db_table }} (
-            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
-          ) VALUES (
-            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
-            '{{ playbook_nombre }}',
-            '{{ playbook_id }}',
-            '{{ tarea_nombre }}',
-            {{ (resultado_tarea.rc | default(0)) == 0 | int }},
-            '{{ resultado_tarea | to_json | replace("'", "''") }}',
-            '',
-            NOW(),
-            NOW()
-          );
-      delegate_to: localhost
-      become: false
+    - name: Tarea 5.1 - Validar que Veyon está escuchando en el puerto 11100
+      shell: ss -tuln | grep ':11100'
+      register: resultado_validacion_veyon
+      changed_when: false
+      failed_when: resultado_validacion_veyon.rc != 0
+
