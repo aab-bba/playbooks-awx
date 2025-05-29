@@ -69,7 +69,7 @@
 
     - name: Tarea 2.2 - Importar clave pública
       command: >
-        veyon-cli authkeys import public "{{ veyon_key_filename }}" --name "Taller03"
+        veyon-cli authkeys import alumno/public {{ veyon_key_filename }}
       register: resultado_tarea_2a
       ignore_errors: true
 
