@@ -105,7 +105,7 @@
             NOW(), NOW()
           );
 
-    - name: Tarea 3.0 - Crear directorio de configuración dconf si no existe
+    - name: Tarea 3.1 - Crear directorio de configuración dconf si no existe
       file:
         path: /etc/dconf/db/local.d
         state: directory
@@ -113,7 +113,7 @@
         group: root
         mode: '0755'
 
-    - name: Tarea 3.1 - Crear configuración global de energía para todos los usuarios
+    - name: Tarea 3.2 - Crear configuración global de energía para todos los usuarios
       copy:
         dest: /etc/dconf/db/local.d/00-power
         content: |
@@ -125,10 +125,13 @@
         owner: root
         group: root
         mode: '0644'
-      register: resultado_configuracion_energia
-      notify: Actualizar dconf
 
-    - name: Tarea 3.2 - Registrar configuración global de energía en BBDD
+
+    - name: Tarea 3.3 - Ejecutar dconf update
+      command: dconf update
+    
+
+    - name: Tarea 3.4 - Registrar configuración global de energía en BBDD
       delegate_to: localhost
       become: false
       community.mysql.mysql_query:
@@ -221,6 +224,3 @@
             'Configurado en .bash_logout',
             NOW(), NOW()
           );
-  handlers:
-    - name: Actualizar dconf
-      command: dconf update
