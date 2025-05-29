@@ -1,5 +1,5 @@
 - name: Instalar y configurar Veyon como cliente
-  hosts: alumnos
+  hosts: pendientes
   become: true
   vars:
     playbook_nombre: "FU07 - configurar_veyon_cliente"
