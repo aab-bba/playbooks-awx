@@ -11,12 +11,11 @@
         {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
         '{{ playbook_nombre }}',
         '{{ playbook_id }}',
-        '{{ task_name }}',
-        {{ task_success | default(0) }},
-        '{{ (task_message | default(""))[:1000] | replace("'", "''") }}'
-        '{{ (help_message | default(""))[:1000] | replace("'", "''") }}'
+        '{{ tarea_nombre }}',
+        {{ resultado_tarea is defined and resultado_tarea.failed is defined and not resultado_tarea.failed | int }},
+        '{{ (resultado_tarea.stdout | default(""))[:1000] | replace("'", "''") }}',
+        '{{ (resultado_tarea.stderr | default(""))[:1000] | replace("'", "''") }}',
         NOW(),
         NOW()
       );
   delegate_to: localhost
-  become: false
