@@ -7,6 +7,7 @@
     tarea_1: "Tarea 1 - Eliminar usuarios innecesarios"
     tarea_2: "Tarea 2 - Crear usuario admin, con ssh, acceso sudo "
     tarea_3: "Tarea 3 - Crear usuario alumno"
+    tarea_4: "Tarea 4 - Denegar a alumno conexiones ssh entrantes"
     playbook_nombre: "FU02 - crear_usuario_temporal"
 
   tasks:
@@ -203,6 +204,45 @@
           );
       delegate_to: localhost
       ignore_errors: false
+
+    - name: Tarea 4.1 - Denegar acceso SSH al usuario alumno
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        line: "DenyUsers alumno"
+        state: present
+        create: yes
+      become: true
+
+    - name: Tarea 4.2 - Reiniciar servicio SSH para aplicar cambios
+      service:
+        name: ssh
+        state: restarted
+      become: true
+    
+    - name: Tarea 4.3 - Registrar restricción SSH en BBDD
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            '{{ tarea_4 }}',
+            1,
+            'Acceso SSH denegado para el usuario alumno mediante DenyUsers en sshd_config',
+            'Verifica si sshd_config está correctamente editado y que ssh se ha reiniciado.',
+            NOW(),
+            NOW()
+          );
+      delegate_to: localhost
+      ignore_errors: false
+
+
 
 
 

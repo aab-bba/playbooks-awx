@@ -105,54 +105,24 @@
             NOW(), NOW()
           );
 
-    - name: Tarea 3.1 - Crear carpeta de autostart
-      file:
-        path: /home/alumno/.config/autostart
-        state: directory
-        owner: alumno
-        group: alumno
-        mode: '0755'
 
-    - name: Tarea 3.1.1 - Crear carpeta para scripts de configuración de energía
-      file:
-        path: /home/alumno/.config/scripts
-        state: directory
-        owner: alumno
-        group: alumno
-        mode: '0755'
-      
-        
-    - name: Tarea 3.2 - Crear script configuración de energía
+    - name: Tarea 3.1 - Modificar acceso directo de Firefox para abrir en incógnito
+      become: true
       copy:
-        dest: /home/alumno/.config/scripts/configurar_energia.sh
-        content: |
-          #!/bin/bash
-          export DISPLAY=:0
-          export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
-          gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
-          gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 0
-          gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'nothing'
-          gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-timeout 0
-        owner: alumno
-        group: alumno
-        mode: '0755'
-    
-    - name: Tarea 3.3 - Crear acceso en autostart
-      copy:
-        dest: /home/alumno/.config/autostart/energia.desktop
+        dest: /var/lib/snapd/desktop/applications/firefox_firefox.desktop
         content: |
           [Desktop Entry]
+          Name=Firefox (Incógnito)
+          Exec=firefox --private-window %u
+          Icon=firefox
           Type=Application
-          Exec=/home/alumno/.config/scripts/configurar_energia.sh
-          Hidden=false
-          NoDisplay=false
-          X-GNOME-Autostart-enabled=true
-          Name=Configuración de energía
-        owner: alumno
-        group: alumno
+          Categories=Network;WebBrowser;
+        owner: root
+        group: root
         mode: '0644'
-    
-    - name: Tarea 3.4 - Registrar configuración de energía en BBDD
+
+
+    - name: Tarea 3.2 - Registrar configuración Firefox en BBDD
       delegate_to: localhost
       become: false
       community.mysql.mysql_query:
@@ -160,20 +130,20 @@
         login_user: "{{ db_user }}"
         login_password: "{{ db_password }}"
         login_host: "{{ db_host }}"
-        query: |
-          INSERT INTO tasks (
+        query: >
+          INSERT INTO {{ db_table }} (
             host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
           ) VALUES (
             {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
             '{{ playbook_nombre }}',
             '{{ playbook_id }}',
-            'Tarea 3 - Configurar energía en sesión alumno',
+            '{{ tarea_4 }}',
             1,
-            'Configuración de energía añadida a autostart',
-            'Verifica si el usuario ha iniciado sesión gráfica para aplicar los cambios.',
-            NOW(),
-            NOW()
+            'Firefox abre en modo incógnito',
+            'Se ha modificado el .desktop para firefox',
+            NOW(), NOW()
           );
+    
 
     - name: Tarea 4.1 - Desactivar guardado de historial en .bashrc
       lineinfile:
@@ -183,7 +153,7 @@
       become: true
       become_user: alumno
 
-    - name: Tarea 4.1.1 - Asegurar permisos correctos de .bashrc
+    - name: Tarea 4.2 - Asegurar permisos correctos de .bashrc
       file:
         path: /home/alumno/.bashrc
         owner: alumno
@@ -191,7 +161,7 @@
         mode: '0644'
         
     
-    - name: Tarea 4.2 - Limpiar historial actual
+    - name: Tarea 4.3 - Limpiar historial actual
       copy:
         content: ""
         dest: /home/alumno/.bash_history
@@ -199,7 +169,7 @@
         group: alumno
         mode: '0600'
     
-    - name: Tarea 4.3 - Registrar limpieza de historial en BBDD
+    - name: Tarea 4.4 - Registrar limpieza de historial en BBDD
       delegate_to: localhost
       become: false
       community.mysql.mysql_query:
@@ -220,45 +190,4 @@
             'Asegúrate de que el usuario no reescriba .bashrc con otro perfil.',
             NOW(),
             NOW()
-          );
-        
-
-
-
-    - name: Tarea 5.1 - Modificar acceso directo de Firefox para abrir en incógnito
-      become: true
-      copy:
-        dest: /var/lib/snapd/desktop/applications/firefox_firefox.desktop
-        content: |
-          [Desktop Entry]
-          Name=Firefox (Incógnito)
-          Exec=firefox --private-window %u
-          Icon=firefox
-          Type=Application
-          Categories=Network;WebBrowser;
-        owner: root
-        group: root
-        mode: '0644'
-
-
-    - name: Tarea 5.2 - Registrar configuración Firefox en BBDD
-      delegate_to: localhost
-      become: false
-      community.mysql.mysql_query:
-        login_db: "{{ db_name }}"
-        login_user: "{{ db_user }}"
-        login_password: "{{ db_password }}"
-        login_host: "{{ db_host }}"
-        query: >
-          INSERT INTO {{ db_table }} (
-            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
-          ) VALUES (
-            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
-            '{{ playbook_nombre }}',
-            '{{ playbook_id }}',
-            '{{ tarea_4 }}',
-            1,
-            'Firefox abre en modo incógnito',
-            'Se ha modificado el .desktop para firefox',
-            NOW(), NOW()
           );
