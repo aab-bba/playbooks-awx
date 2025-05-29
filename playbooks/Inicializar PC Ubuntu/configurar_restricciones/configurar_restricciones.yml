@@ -105,33 +105,45 @@
             NOW(), NOW()
           );
 
-    - name: Tarea 3.1 - Crear directorio de configuración dconf si no existe
+    - name: Tarea 3.1 - Crear carpeta de autostart
       file:
-        path: /etc/dconf/db/local.d
+        path: /home/alumno/.config/autostart
         state: directory
-        owner: root
-        group: root
+        owner: alumno
+        group: alumno
         mode: '0755'
-
-    - name: Tarea 3.2 - Crear configuración global de energía para todos los usuarios
+        
+    - name: Tarea 3.2 - Crear script configuración de energía
       copy:
-        dest: /etc/dconf/db/local.d/00-power
+        dest: /home/alumno/.config/scripts/configurar_energia.sh
         content: |
-          [org/gnome/settings-daemon/plugins/power]
-          sleep-inactive-ac-type='nothing'
-          sleep-inactive-ac-timeout=0
-          sleep-inactive-battery-type='nothing'
-          sleep-inactive-battery-timeout=0
-        owner: root
-        group: root
-        mode: '0644'
-
-
-    - name: Tarea 3.3 - Ejecutar dconf update
-      command: dconf update
+          #!/bin/bash
+          export DISPLAY=:0
+          export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+          gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
+          gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 0
+          gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'nothing'
+          gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-timeout 0
+        owner: alumno
+        group: alumno
+        mode: '0755'
     
-
-    - name: Tarea 3.4 - Registrar configuración global de energía en BBDD
+    - name: Tarea 3.3 - Crear acceso en autostart
+      copy:
+        dest: /home/alumno/.config/autostart/energia.desktop
+        content: |
+          [Desktop Entry]
+          Type=Application
+          Exec=/home/alumno/.config/scripts/configurar_energia.sh
+          Hidden=false
+          NoDisplay=false
+          X-GNOME-Autostart-enabled=true
+          Name=Configuración de energía
+        owner: alumno
+        group: alumno
+        mode: '0644'
+    
+    - name: Tarea 3.4 - Registrar configuración de energía en BBDD
       delegate_to: localhost
       become: false
       community.mysql.mysql_query:
@@ -139,24 +151,66 @@
         login_user: "{{ db_user }}"
         login_password: "{{ db_password }}"
         login_host: "{{ db_host }}"
-        query: >
-          INSERT INTO {{ db_table }} (
+        query: |
+          INSERT INTO tasks (
             host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
           ) VALUES (
             {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
             '{{ playbook_nombre }}',
             '{{ playbook_id }}',
-            'Tarea 3 - Configurar energía global con dconf',
-            {{ 0 if resultado_configuracion_energia.failed | default(false) else 1 }},
-            '{{ resultado_configuracion_energia.msg | default("OK") }}',
-            'Verifica que dconf esté instalado correctamente y el esquema GNOME exista.',
+            'Tarea 3 - Configurar energía en sesión alumno',
+            1,
+            'Configuración de energía añadida a autostart',
+            'Verifica si el usuario ha iniciado sesión gráfica para aplicar los cambios.',
             NOW(),
             NOW()
           );
+    
+    # ---------------- HISTORIAL TERMINAL ----------------
+    - name: Tarea 4.1 - Desactivar guardado de historial en .bashrc
+      lineinfile:
+        path: /home/alumno/.bashrc
+        line: "export HISTFILE=/dev/null"
+        create: yes
+      owner: alumno
+      group: alumno
+      mode: '0644'
+    
+    - name: Tarea 4.2 - Limpiar historial actual
+      copy:
+        content: ""
+        dest: /home/alumno/.bash_history
+        owner: alumno
+        group: alumno
+        mode: '0600'
+    
+    - name: Tarea 4.3 - Registrar limpieza de historial en BBDD
+      delegate_to: localhost
+      become: false
+      community.mysql.mysql_query:
+        login_db: "{{ db_name }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_host: "{{ db_host }}"
+        query: |
+          INSERT INTO tasks (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            'Tarea 4 - Desactivar historial bash',
+            1,
+            'Historial de terminal limpiado y desactivado para alumno',
+            'Asegúrate de que el usuario no reescriba .bashrc con otro perfil.',
+            NOW(),
+            NOW()
+          );
+        
 
 
 
-    - name: Tarea 4.1 - Modificar acceso directo de Firefox para abrir en incógnito
+    - name: Tarea 5.1 - Modificar acceso directo de Firefox para abrir en incógnito
       become: true
       copy:
         dest: /var/lib/snapd/desktop/applications/firefox_firefox.desktop
@@ -172,7 +226,7 @@
         mode: '0644'
 
 
-    - name: Tarea 4.2 - Registrar configuración Firefox en BBDD
+    - name: Tarea 5.2 - Registrar configuración Firefox en BBDD
       delegate_to: localhost
       become: false
       community.mysql.mysql_query:
@@ -191,36 +245,5 @@
             1,
             'Firefox abre en modo incógnito',
             'Se ha modificado el .desktop para firefox',
-            NOW(), NOW()
-          );
-
-    - name: Tarea 5.1 - Borrar historial de terminal al salir
-      lineinfile:
-        path: /home/alumno/.bash_logout
-        line: 'cat /dev/null > ~/.bash_history && history -c'
-        create: yes
-        owner: alumno
-        group: alumno
-        mode: '0644'
-
-    - name: Tarea 5.2 - Registrar limpieza de historial en BBDD
-      delegate_to: localhost
-      become: false
-      community.mysql.mysql_query:
-        login_db: "{{ db_name }}"
-        login_user: "{{ db_user }}"
-        login_password: "{{ db_password }}"
-        login_host: "{{ db_host }}"
-        query: >
-          INSERT INTO {{ db_table }} (
-            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
-          ) VALUES (
-            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
-            '{{ playbook_nombre }}',
-            '{{ playbook_id }}',
-            '{{ tarea_5 }}',
-            1,
-            'Historial de terminal se borra al salir',
-            'Configurado en .bash_logout',
             NOW(), NOW()
           );
