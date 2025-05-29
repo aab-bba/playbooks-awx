@@ -22,17 +22,15 @@
         dest: /tmp/veyon.deb
         mode: '0644'
 
+    - name: Actualizar índice de paquetes
+      apt:
+        update_cache: yes
+
     - name: Tarea 1.2 - Instalar Veyon
       apt:
         deb: /tmp/veyon.deb
       register: resultado_tarea_1
       ignore_errors: true
-
-    - name: Tarea 1.3 - Registrar instalación Veyon en BBDD
-      include_tasks: registrar_en_bbdd.yml
-      vars:
-        resultado_tarea: "{{ resultado_tarea_1 }}"
-        tarea_nombre: "{{ tarea_1 }}"
 
     # 2. Configurar Veyon (clave y ocultar icono)
     - name: Tarea 2.1 - Copiar clave pública desde repositorio
@@ -53,11 +51,6 @@
       register: resultado_tarea_2b
       ignore_errors: true
 
-    - name: Tarea 2.4 - Registrar configuración en BBDD
-      include_tasks: registrar_en_bbdd.yml
-      vars:
-        resultado_tarea: "{{ resultado_tarea_2b }}"
-        tarea_nombre: "{{ tarea_2 }}"
 
     # 3. Abrir puertos de red
     - name: Tarea 3.1 - Abrir puertos firewall para Veyon
@@ -83,12 +76,6 @@
         state: started
       register: resultado_tarea_4
       ignore_errors: true
-
-    - name: Tarea 4.2 - Registrar arranque del servicio en BBDD
-      include_tasks: registrar_en_bbdd.yml
-      vars:
-        resultado_tarea: "{{ resultado_tarea_4 }}"
-        tarea_nombre: "{{ tarea_4 }}"
 
 
     - name: Tarea 5 - Registrar resultado en BBDD
