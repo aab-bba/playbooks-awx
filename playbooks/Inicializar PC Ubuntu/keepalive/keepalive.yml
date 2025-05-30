@@ -1,5 +1,5 @@
 - name: Instalar script keepalive en los equipos del aula
-  hosts: all
+  hosts: pendientes
   become: true
 
   vars:
