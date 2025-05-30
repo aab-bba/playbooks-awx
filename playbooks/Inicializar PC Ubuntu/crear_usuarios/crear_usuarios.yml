@@ -212,6 +212,57 @@
       delegate_to: localhost
       ignore_errors: false
 
+    - name: Tarea 3.4 - Asegurar que alumno no tiene permisos sudo
+      block:
+
+        - name: Tarea 3.4.1 - Eliminar alumno del grupo sudo
+          ansible.builtin.user:
+            name: alumno
+            groups: alumno
+            append: no
+          become: true
+
+        - name: Tarea 3.4.2 - Eliminar archivo sudoers.d de alumno si existe
+          ansible.builtin.file:
+            path: /etc/sudoers.d/alumno
+            state: absent
+          become: true
+
+        - name: Tarea 3.4.3 - Crear archivo sudoers.d que deniegue sudo a alumno explícitamente
+          ansible.builtin.copy:
+            dest: /etc/sudoers.d/alumno
+            content: "alumno ALL=(ALL) !ALL\n"
+            mode: '0440'
+          become: true
+
+      rescue:
+        - set_fact:
+            help_message_3: "No se pudo restringir completamente el acceso sudo del usuario alumno."
+            is_ok_3: 0
+
+    - name: Tarea 3.5 - Registrar restricción sudo en BBDD
+      community.mysql.mysql_query:
+        login_host: "{{ db_host }}"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        login_db: "{{ db_name }}"
+        query: >
+          INSERT INTO {{ db_table }} (
+            host_id, playbook, playbook_uid, task_name, is_ok, task_message, help_message, created, modified
+          ) VALUES (
+            {{ hostvars[inventory_hostname].equipo_id | default('NULL') }},
+            '{{ playbook_nombre }}',
+            '{{ playbook_id }}',
+            'Tarea 3 - Restringir sudo alumno',
+            {{ is_ok_3 | default(1) }},
+            'El usuario alumno ha sido eliminado del grupo sudo y tiene denegado su uso en sudoers.d.',
+            '{{ help_message_3 | default("") | replace("'", "''") }}',
+            NOW(),
+            NOW()
+          );
+      delegate_to: localhost
+
+
     - name: Tarea 4.1 - Denegar acceso SSH al usuario alumno
       lineinfile:
         path: /etc/ssh/sshd_config

@@ -102,9 +102,9 @@
         tarea_nombre: "{{ tarea_3 }}"
 
     # 4. Habilitar servicio
-    - name: Tarea 4.1.1 - Habilitar servicio Veyon
-      command: veyon-cli service enable
-      register: resultado_tarea_4_enable
+    - name: Tarea 4.1.1 - Registrar el servicio Veyon
+      command: veyon-cli service register
+      register: resultado_tarea_4_register
       ignore_errors: true
 
     - name: Tarea 4.1.2 - Iniciar servicio Veyon
@@ -112,12 +112,12 @@
       register: resultado_tarea_4_start
       ignore_errors: true
 
-
     - name: Tarea 4.2 - Registrar arranque del servicio en BBDD
-      include_tasks: ../../common/register_task_result.yml
+      include_tasks: "{{ playbooks_root }}/common/register_task_result.yml"
       vars:
         resultado_tarea: "{{ resultado_tarea_4_start }}"
         tarea_nombre: "{{ tarea_4 }}"
+
 
 
     - name: Tarea 5.1 - Validar que Veyon está escuchando en el puerto 11100
