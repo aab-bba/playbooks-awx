@@ -160,6 +160,25 @@
         resultado_tarea: "{{ resultado_tarea_7 }}"
         tarea_nombre: "Tarea 7 - Importar configuración de Veyon"
 
+    - name: Tarea 8.1 - Ocultar accesos directos Veyon del menú
+      lineinfile:
+        path: "{{ item }}"
+        line: "NoDisplay=true"
+        create: no
+        insertafter: '^Exec='
+      loop:
+        - /usr/share/applications/veyon-master.desktop
+        - /usr/share/applications/veyon-configurator.desktop
+      register: resultado_tarea_6
+      ignore_errors: true
+
+    - name: Tarea 8.2 - Registrar ocultación de accesos Veyon en BBDD
+      include_tasks: "{{ playbooks_root }}/common/register_task_result.yml"
+      vars:
+        resultado_tarea: "{{ resultado_tarea_6 }}"
+        tarea_nombre: "Tarea 6 - Ocultar accesos de Veyon del menú"
+
+
   handlers:
     - name: Reiniciar GDM
       systemd:
