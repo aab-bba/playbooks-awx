@@ -126,3 +126,45 @@
       changed_when: false
       failed_when: resultado_validacion_veyon.rc != 0
 
+    - name: Tarea 6.1 - Asegurar que Wayland está deshabilitado en GDM
+      lineinfile:
+        path: /etc/gdm3/custom.conf
+        regexp: '^#?WaylandEnable='
+        line: 'WaylandEnable=false'
+        insertafter: '^\[daemon\]'
+      notify: Reiniciar GDM
+      register: resultado_tarea_6
+      ignore_errors: true
+
+    - name: Tarea 6.2 - Registrar configuración de Wayland en BBDD
+      include_tasks: "{{ playbooks_root }}/common/register_task_result.yml"
+      vars:
+        resultado_tarea: "{{ resultado_tarea_6 }}"
+        tarea_nombre: "Tarea 6 - Deshabilitar Wayland"
+
+    - name: Tarea 7.1 - Copiar configuración de Veyon desde repositorio
+      copy:
+        src: ../files/config.json
+        dest: /tmp/veyon_config.json
+        mode: '0644'
+
+    - name: Tarea 7.2 - Importar configuración de Veyon
+      command: >
+        veyon-cli config import /tmp/veyon_config.json
+      register: resultado_tarea_7
+      ignore_errors: true
+
+    - name: Tarea 7.3 - Registrar importación de configuración en BBDD
+      include_tasks: "{{ playbooks_root }}/common/register_task_result.yml"
+      vars:
+        resultado_tarea: "{{ resultado_tarea_7 }}"
+        tarea_nombre: "Tarea 7 - Importar configuración de Veyon"
+
+  handlers:
+    - name: Reiniciar GDM
+      systemd:
+        name: gdm
+        state: restarted
+
+
+
