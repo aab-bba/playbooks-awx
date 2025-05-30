@@ -1,7 +1,6 @@
 - name: Instalar script keepalive en los equipos del aula
   hosts: pendientes
   become: true
-
   vars:
     playbook_nombre: "FU08 - instalar_keepalive_script"
     tarea_1: "Tarea 1 - Instalar curl"
