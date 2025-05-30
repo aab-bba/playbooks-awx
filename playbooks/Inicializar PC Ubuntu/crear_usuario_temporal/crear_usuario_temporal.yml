@@ -82,6 +82,8 @@
         mode: '0440'
       become: true
       when: resultado_tarea_2 is defined and not resultado_tarea_2.failed | default(false)
+      ignore_errors: true
+      ignore_unreachable: true
 
     - name: Tarea 2.4 - Definir mensaje de ayuda si la tarea 2 falla
       set_fact:
