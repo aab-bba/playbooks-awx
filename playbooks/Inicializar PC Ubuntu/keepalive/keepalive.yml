@@ -1,0 +1,64 @@
+- name: Instalar script keepalive en los equipos del aula
+  hosts: all
+  become: true
+
+  vars:
+    playbook_nombre: "FU08 - instalar_keepalive_script"
+    tarea_1: "Tarea 1 - Instalar curl"
+    tarea_2: "Tarea 2 - Copiar script keepalive"
+    tarea_3: "Tarea 3 - Crear cron para keepalive"
+    playbooks_root: "{{ playbook_dir | regex_replace('(?s)(.*?/playbooks)(/.*)?', '\\1') }}"
+
+  tasks:
+    - name: Tarea 0 - Generar timestamp único para esta ejecución
+      set_fact:
+        playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+      run_once: true
+
+    # 1. Instalar curl
+    - name: Tarea 1.1 - Asegurarse de que curl esté instalado
+      apt:
+        name: curl
+        state: present
+        update_cache: yes
+      register: resultado_tarea_1
+      ignore_errors: true
+
+    - name: Tarea 1.2 - Registrar instalación de curl
+      include_tasks: "{{ playbooks_root }}/common/register_task_result.yml"
+      vars:
+        resultado_tarea: "{{ resultado_tarea_1 }}"
+        tarea_nombre: "{{ tarea_1 }}"
+
+    # 2. Copiar el script
+    - name: Tarea 2.1 - Copiar script keepalive
+      copy:
+        src: ../files/keepalive.sh
+        dest: /usr/local/bin/keepalive.sh
+        owner: root
+        group: root
+        mode: '0755'
+      register: resultado_tarea_2
+      ignore_errors: true
+
+    - name: Tarea 2.2 - Registrar copia del script
+      include_tasks: "{{ playbooks_root }}/common/register_task_result.yml"
+      vars:
+        resultado_tarea: "{{ resultado_tarea_2 }}"
+        tarea_nombre: "{{ tarea_2 }}"
+
+    # 3. Crear cron
+    - name: Tarea 3.1 - Crear cron para ejecutar el script cada minuto
+      cron:
+        name: "Keepalive AWX"
+        user: root
+        minute: "*"
+        job: "/usr/local/bin/keepalive.sh >> /var/log/keepalive.log 2>&1"
+      register: resultado_tarea_3
+      ignore_errors: true
+
+    - name: Tarea 3.2 - Registrar cron en BBDD
+      include_tasks: "{{ playbooks_root }}/common/register_task_result.yml"
+      vars:
+        resultado_tarea: "{{ resultado_tarea_3 }}"
+        tarea_nombre: "{{ tarea_3 }}"
