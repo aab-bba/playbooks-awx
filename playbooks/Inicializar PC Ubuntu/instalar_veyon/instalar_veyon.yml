@@ -102,12 +102,19 @@
         tarea_nombre: "{{ tarea_3 }}"
 
     # 4. Habilitar servicio
+    - name: Tarea 4.1.0 - Anular registro previo del servicio (si existiera)
+      become: true
+      shell: veyon-cli service unregister
+      ignore_errors: true
+    
     - name: Tarea 4.1.1 - Registrar el servicio Veyon
+      become: true
       command: veyon-cli service register
       register: resultado_tarea_4_register
       ignore_errors: true
 
     - name: Tarea 4.1.2 - Iniciar servicio Veyon
+      become: true
       command: veyon-cli service start
       register: resultado_tarea_4_start
       ignore_errors: true
@@ -118,49 +125,41 @@
         resultado_tarea: "{{ resultado_tarea_4_start }}"
         tarea_nombre: "{{ tarea_4 }}"
 
-
-
-    - name: Tarea 5.1 - Validar que Veyon está escuchando en el puerto 11100
-      shell: ss -tuln | grep ':11100'
-      register: resultado_validacion_veyon
-      changed_when: false
-      failed_when: resultado_validacion_veyon.rc != 0
-
-    - name: Tarea 6.1 - Asegurar que Wayland está deshabilitado en GDM
+    - name: Tarea 5.1 - Asegurar que Wayland está deshabilitado en GDM
       lineinfile:
         path: /etc/gdm3/custom.conf
         regexp: '^#?WaylandEnable='
         line: 'WaylandEnable=false'
         insertafter: '^\[daemon\]'
       notify: Reiniciar GDM
-      register: resultado_tarea_6
+      register: resultado_tarea_5
       ignore_errors: true
 
-    - name: Tarea 6.2 - Registrar configuración de Wayland en BBDD
+    - name: Tarea 5.2 - Registrar configuración de Wayland en BBDD
       include_tasks: "{{ playbooks_root }}/common/register_task_result.yml"
       vars:
-        resultado_tarea: "{{ resultado_tarea_6 }}"
-        tarea_nombre: "Tarea 6 - Deshabilitar Wayland"
+        resultado_tarea: "{{ resultado_tarea_5 }}"
+        tarea_nombre: "Tarea 5 - Deshabilitar Wayland"
 
-    - name: Tarea 7.1 - Copiar configuración de Veyon desde repositorio
+    - name: Tarea 6.1 - Copiar configuración de Veyon desde repositorio
       copy:
         src: ../files/config.json
         dest: /tmp/veyon_config.json
         mode: '0644'
 
-    - name: Tarea 7.2 - Importar configuración de Veyon
+    - name: Tarea 6.2 - Importar configuración de Veyon
       command: >
         veyon-cli config import /tmp/veyon_config.json
-      register: resultado_tarea_7
+      register: resultado_tarea_6
       ignore_errors: true
 
-    - name: Tarea 7.3 - Registrar importación de configuración en BBDD
+    - name: Tarea 6.3 - Registrar importación de configuración en BBDD
       include_tasks: "{{ playbooks_root }}/common/register_task_result.yml"
       vars:
-        resultado_tarea: "{{ resultado_tarea_7 }}"
-        tarea_nombre: "Tarea 7 - Importar configuración de Veyon"
+        resultado_tarea: "{{ resultado_tarea_6 }}"
+        tarea_nombre: "Tarea 6 - Importar configuración de Veyon"
 
-    - name: Tarea 8.1 - Ocultar accesos directos Veyon del menú
+    - name: Tarea 7.1 - Ocultar accesos directos Veyon del menú
       lineinfile:
         path: "{{ item }}"
         line: "NoDisplay=true"
@@ -169,14 +168,14 @@
       loop:
         - /usr/share/applications/veyon-master.desktop
         - /usr/share/applications/veyon-configurator.desktop
-      register: resultado_tarea_6
+      register: resultado_tarea_7
       ignore_errors: true
 
-    - name: Tarea 8.2 - Registrar ocultación de accesos Veyon en BBDD
+    - name: Tarea 7.2 - Registrar ocultación de accesos Veyon en BBDD
       include_tasks: "{{ playbooks_root }}/common/register_task_result.yml"
       vars:
-        resultado_tarea: "{{ resultado_tarea_6 }}"
-        tarea_nombre: "Tarea 6 - Ocultar accesos de Veyon del menú"
+        resultado_tarea: "{{ resultado_tarea_7 }}"
+        tarea_nombre: "Tarea 7 - Ocultar accesos de Veyon del menú"
 
 
   handlers:
