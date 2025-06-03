@@ -16,6 +16,16 @@
         playbook_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
       run_once: true
 
+    - name: Tarea 1.0 - Forzar desbloqueo y limpieza de APT antes de instalar
+      shell: |
+        rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock
+        rm -f /var/cache/apt/archives/lock
+        dpkg --configure -a
+        apt clean
+        apt update
+      become: true
+
+
     - name: Tarea 1.1 - Instalar paquetes necesarios
       apt:
         name:
