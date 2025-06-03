@@ -37,6 +37,8 @@
         owner: root
         group: root
         mode: '0755'
+        force: true
+        template: yes
       register: resultado_tarea_2
       ignore_errors: true
 

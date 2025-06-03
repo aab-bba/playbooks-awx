@@ -1,11 +1,16 @@
 #!/bin/bash
 
-SERVER="http://T04-00-Ubuntu.local:5000/keepalive"
+SERVER="{{ server_url }}"
 
 HOSTNAME=$(/bin/hostname)
 IP=$(/bin/hostname -I | /usr/bin/awk '{print $1}')
-USER=$(logname 2>/dev/null || who | awk '{print $1}' | head -n1)
+USER=$(loginctl list-sessions 2>/dev/null | awk '$3 ~ /^[a-z]/ {print $3; exit}')
+if [ -z "$USER" ]; then
+  USER=$(who | awk '{print $1}' | grep -v root | head -n1)
+fi
 OS=$(/usr/bin/lsb_release -d | /usr/bin/awk -F"\t" '{print $2}')
+MAC=$(ip link show | awk '/ether/ {print $2; exit}')
+
 
 /usr/bin/curl -s -X POST "$SERVER" \
     -H "Content-Type: application/json" \
@@ -13,6 +18,7 @@ OS=$(/usr/bin/lsb_release -d | /usr/bin/awk -F"\t" '{print $2}')
         \"hostname\": \"$HOSTNAME\",
         \"ip\": \"$IP\",
         \"user\": \"$USER\",
-        \"os\": \"$OS\"
+        \"os\": \"$OS\",
+        \"mac\": \"$MAC\"
     }"
 
