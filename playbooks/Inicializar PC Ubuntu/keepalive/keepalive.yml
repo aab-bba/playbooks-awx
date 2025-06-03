@@ -31,14 +31,12 @@
 
     # 2. Copiar el script
     - name: Tarea 2.1 - Copiar script keepalive
-      copy:
-        src: ../files/keepalive.sh.j2
+      template:
+        src: files/keepalive.sh.j2
         dest: /usr/local/bin/keepalive.sh
         owner: root
         group: root
         mode: '0755'
-        force: true
-        template: yes
       register: resultado_tarea_2
       ignore_errors: true
 
