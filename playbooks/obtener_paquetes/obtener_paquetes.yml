@@ -1,0 +1,40 @@
+---
+- name: Recolectar paquetes instalados y enviarlos al servidor Flask
+  hosts: all
+  gather_facts: false
+  vars:
+    flask_url: "http://T04-00-Ubuntu.local:5000/report_packages"   
+    report_payload: {}
+
+  tasks:
+
+  - name: Obtener paquetes (Deb/RPM)                       # 1️⃣
+    package_facts:
+    register: pkgfacts
+
+  - name: Construir payload JSON                           # 2️⃣
+    set_fact:
+      report_payload:
+        hostname: "{{ inventory_hostname }}"
+        packages: >
+          {{
+            (pkgfacts.ansible_facts.packages | dict2items)
+            | map(attribute='value')
+            | flatten
+            | map('extract', ['name','version'])
+            | list
+          }}
+
+  - name: Enviar a Flask                                   # 3️⃣
+    uri:
+      url: "{{ flask_url }}"
+      method: POST
+      body_format: json
+      headers:
+        Content-Type: "application/json"
+      body: "{{ report_payload }}"
+    register: response
+
+  - name: Mostrar confirmación
+    debug:
+      msg: "Flask devolvió {{ response.status }} para {{ inventory_hostname }}"
